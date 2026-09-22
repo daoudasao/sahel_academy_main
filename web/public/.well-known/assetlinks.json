@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.sahelacademy.app",
+      "sha256_cert_fingerprints": [
+        "21:C8:00:27:30:CD:EA:42:DC:04:38:1B:7A:3C:34:1E:2F:83:A1:DD:AD:D2:36:FC:7D:9D:8D:5A:97:F3:5D:94"
+      ]
+    }
+  }
+]

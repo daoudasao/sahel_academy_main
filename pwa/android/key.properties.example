@@ -1,0 +1,14 @@
+# Copier ce fichier en `android/key.properties` (jamais versionné) et le remplir.
+#
+# Créer la clé une seule fois, puis la sauvegarder en lieu sûr — sans elle,
+# impossible de publier une mise à jour de l'app :
+#   keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA \
+#     -keysize 2048 -validity 10000 -alias upload
+#
+# Empreinte SHA-256 à reporter dans assetlinks.json et Firebase :
+#   keytool -list -v -keystore ~/upload-keystore.jks -alias upload
+
+storePassword=CHANGE_MOI
+keyPassword=CHANGE_MOI
+keyAlias=upload
+storeFile=/chemin/absolu/vers/upload-keystore.jks

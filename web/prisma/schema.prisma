@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+  // `native` pour le développement local ; `linux-musl-openssl-3.0.x` pour
+  // l'image Docker (node:20-alpine, musl + OpenSSL 3).
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Candidat {
+  id            Int      @id @default(autoincrement())
+  nom           String
+  telephone     String                       // numéro WhatsApp normalisé (recherche)
+  telephoneBrut String                       // numéro tel qu'écrit à l'origine
+  formation     String                       // "Anglais" | "Réseau informatique"
+  email         String?
+  niveauEtude   String?
+  situation     String?
+  niveau        String?                      // niveau anglais OU informatique selon la bourse
+  statut        String   @default("admis")   // admis | non_retenu | en_attente
+  horodateur    String?
+  createdAt     DateTime @default(now())
+
+  @@unique([telephone, formation])           // une personne peut postuler aux 2 bourses
+  @@index([telephone])
+}

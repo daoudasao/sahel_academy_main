@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────────────────
+# Stack Portainer — Sahel Academy (monorepo)
+# Un seul dépôt, 3 sous-dossiers : backend/ , web/ , pwa/
+# Portainer construit chaque image depuis son sous-dossier (méthode Repository).
+# Base de données : Neon externe (renseigner DATABASE_URL dans les variables).
+# ─────────────────────────────────────────────────────────────
+services:
+
+  # ── 1. API NestJS ── (applique les migrations Prisma au démarrage)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sahel_academy_backend
+    restart: always
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-}
+      ADMIN_URL: ${ADMIN_URL:-}
+      VERIF_URL: ${VERIF_URL:-}
+      WEB_URL: ${WEB_URL:-}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_ID_ANDROID: ${GOOGLE_CLIENT_ID_ANDROID:-}
+      GOOGLE_CLIENT_ID_IOS: ${GOOGLE_CLIENT_ID_IOS:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+      APPLE_CLIENT_SECRET: ${APPLE_CLIENT_SECRET:-}
+      FIREBASE_ADMIN_CREDENTIALS_BASE64: ${FIREBASE_ADMIN_CREDENTIALS_BASE64:-}
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
+      BUNNY_ACCESS_KEY: ${BUNNY_ACCESS_KEY:-}
+      BUNNY_STORAGE_ZONE: ${BUNNY_STORAGE_ZONE:-}
+      BUNNY_STORAGE_ENDPOINT: ${BUNNY_STORAGE_ENDPOINT:-}
+      BUNNY_CDN_DOMAIN: ${BUNNY_CDN_DOMAIN:-}
+      SWAGGER_USER: ${SWAGGER_USER:-}
+      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}
+    networks: [sahel]
+
+  # ── 2. Site Next.js (dashboard admin + pages publiques) ──
+  # NB : les NEXT_PUBLIC_* sont figées au BUILD (URL publiques du serveur).
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+        NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
+    container_name: sahel_academy_web
+    restart: always
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: ${DATABASE_URL:-}
+    depends_on: [backend]
+    networks: [sahel]
+
+  # ── 3. PWA Flutter (web) servie par nginx ──
+  # NB : API_URL est figée au BUILD (--dart-define).
+  pwa:
+    build:
+      context: ./pwa
+      dockerfile: Dockerfile
+      args:
+        FLUTTER_VERSION: ${FLUTTER_VERSION:-3.44.4}
+        API_URL: ${API_URL:-http://localhost:3001/api/v1}
+        WEB_PUSH_VAPID_KEY: ${WEB_PUSH_VAPID_KEY:-}
+        GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
+    container_name: sahel_academy_pwa
+    restart: always
+    ports:
+      - "${PWA_PORT:-8080}:80"
+    networks: [sahel]
+
+networks:
+  sahel:
+    name: sahel-network
+    driver: bridge

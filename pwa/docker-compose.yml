@@ -1,0 +1,17 @@
+# Stack Portainer — PWA Flutter (web), servie par nginx.
+# Méthode « Repository » : Portainer build depuis GitHub (branche feat/web-pwa).
+# API_URL est figée au BUILD (--dart-define).
+services:
+  pwa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        FLUTTER_VERSION: ${FLUTTER_VERSION:-3.44.4}
+        API_URL: ${API_URL:-http://localhost:3001/api/v1}
+        WEB_PUSH_VAPID_KEY: ${WEB_PUSH_VAPID_KEY:-}
+        GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
+    container_name: sahel_academy_pwa
+    restart: always
+    ports:
+      - "${PWA_PORT:-8080}:80"

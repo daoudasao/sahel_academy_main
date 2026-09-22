@@ -1,0 +1,155 @@
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Logger, ForbiddenException } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateProfilDto } from './dto/update-profil.dto';
+import { SetPasswordDto } from './dto/set-password.dto';
+import { CreateInscriptionDto } from './dto/create-inscription.dto';
+import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
+import { Role } from '@prisma/client';
+import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { estEquipe } from '../auth/roles.util';
+import type { User } from '@prisma/client';
+
+@ApiTags('users')
+@ApiBearerAuth('access-token')
+@UseGuards(AuthGuard, RolesGuard)
+@Controller('users')
+export class UsersController {
+  private readonly logger = new Logger(UsersController.name);
+
+  constructor(private readonly usersService: UsersService) {}
+
+  /** Un utilisateur n'accède qu'à ses propres données, sauf s'il fait partie de l'équipe. */
+  private verifierAcces(currentUser: User, userId: string) {
+    if (userId !== currentUser.id && !estEquipe(currentUser)) {
+      throw new ForbiddenException('Accès refusé.');
+    }
+  }
+
+  @Roles(Role.ADMIN)
+  @Post()
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
+  }
+
+  @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE, Role.COMPTABLE, Role.COMMUNITY_MANAGER)
+  @ApiQuery({ name: 'role', enum: Role, required: false })
+  @Get()
+  findAll(@Query('role') role?: Role) {
+    return this.usersService.findAll(role);
+  }
+
+  @Get('me')
+  getProfile(@CurrentUser() user: User) {
+    return this.usersService.findOne(user.id);
+  }
+
+  @Patch('me')
+  updateMyProfile(
+    @CurrentUser() user: User,
+    @Body() updateProfilDto: UpdateProfilDto,
+  ) {
+    return this.usersService.update(user.id, updateProfilDto);
+  }
+
+  @Patch('fcm-token')
+  updateFcmToken(
+    @CurrentUser() user: User,
+    @Body() updateFcmTokenDto: UpdateFcmTokenDto,
+  ) {
+    this.logger.log(`Mise à jour du token push pour l'utilisateur ${user.id}`);
+    return this.usersService.updateFcmToken(user.id, updateFcmTokenDto.fcmToken);
+  }
+
+  @Get(':id')
+  findOne(@CurrentUser() currentUser: User, @Param('id') id: string) {
+    this.verifierAcces(currentUser, id);
+    return this.usersService.findOne(id);
+  }
+
+  @Roles(Role.ADMIN, Role.STAFF)
+  @Patch(':id')
+  async update(
+    @CurrentUser() currentUser: User,
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    const estAdmin = currentUser.role === Role.ADMIN;
+
+    if (updateUserDto.role !== undefined) {
+      if (id === currentUser.id) {
+        throw new ForbiddenException('Vous ne pouvez pas modifier votre propre rôle.');
+      }
+      // Attribuer un rôle (dont ADMIN) est réservé aux administrateurs.
+      if (!estAdmin) {
+        throw new ForbiddenException('Seul un administrateur peut modifier un rôle.');
+      }
+    }
+
+    // Un non-admin ne peut pas modifier un compte administrateur
+    // (e-mail, activation…), sinon il pourrait en prendre le contrôle.
+    if (!estAdmin) {
+      const cible = await this.usersService.findOne(id);
+      if (cible.role === Role.ADMIN) {
+        throw new ForbiddenException('Seul un administrateur peut modifier ce compte.');
+      }
+    }
+
+    return this.usersService.update(id, updateUserDto);
+  }
+
+  /** Réinitialise le mot de passe d'un utilisateur (administrateur uniquement). */
+  @Roles(Role.ADMIN)
+  @Patch(':id/password')
+  setPassword(@Param('id') id: string, @Body() dto: SetPasswordDto) {
+    return this.usersService.setPassword(id, dto.newPassword);
+  }
+
+  @Roles(Role.ADMIN)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
+  }
+
+  @Get(':id/inscriptions')
+  getInscriptions(@CurrentUser() currentUser: User, @Param('id') id: string) {
+    this.verifierAcces(currentUser, id);
+    return this.usersService.getInscriptions(id);
+  }
+
+  @Roles(Role.ADMIN)
+  @Post(':id/inscriptions')
+  inscrire(@Param('id') id: string, @Body() createInscriptionDto: CreateInscriptionDto) {
+    return this.usersService.inscrire(id, createInscriptionDto);
+  }
+
+  @Get(':id/candidatures')
+  getCandidatures(@CurrentUser() currentUser: User, @Param('id') id: string) {
+    this.verifierAcces(currentUser, id);
+    return this.usersService.getCandidatures(id);
+  }
+
+  @Roles(Role.ADMIN)
+  @Patch(':id/inscriptions/:formationId')
+  updateInscriptionStatus(
+    @Param('id') userId: string,
+    @Param('formationId') formationId: string,
+    @Body('statut') statut: string,
+  ) {
+    return this.usersService.updateInscriptionStatus(userId, formationId, statut);
+  }
+
+  @Roles(Role.ADMIN)
+  @Delete(':id/inscriptions/:formationId')
+  removeInscription(
+    @Param('id') userId: string,
+    @Param('formationId') formationId: string,
+  ) {
+    return this.usersService.removeInscription(userId, formationId);
+  }
+}

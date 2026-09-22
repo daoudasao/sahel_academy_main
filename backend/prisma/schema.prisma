@@ -1,0 +1,608 @@
+// ─── Sahel Academy — Prisma Schema ───
+// Generator & Datasource
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  STAFF
+  ETUDIANT
+  FORMATEUR
+  COMPTABLE
+  SUPPORT
+  RESPONSABLE_PEDAGOGIQUE
+  COMMUNITY_MANAGER
+}
+
+enum StatutAdmission {
+  enAttente
+  admis
+  refuse
+}
+
+enum StatutFormation {
+  active
+  inactive
+  archive
+}
+
+enum StatutBourse {
+  ouverte
+  fermee
+  en_attente
+}
+
+enum TypeNotification {
+  actualite
+  paiement
+  classe
+  commentaire
+  systeme
+}
+
+enum TypeMedia {
+  photo
+  video
+  audio
+}
+
+enum TypeChamp {
+  texte
+  paragraphe
+  email
+  telephone
+  nombre
+  choix
+  lien
+}
+
+enum ExpediteurSupport {
+  client
+  support
+}
+
+// ─────────────────────────────────────────
+// AUTHENTIFICATION (Better Auth)
+// ─────────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  nom           String
+  email         String   @unique
+  emailVerified Boolean  @default(true)  // aucune verification d'e-mail a l'inscription : voir databaseHooks dans src/auth/auth.ts
+  telephone     String?
+  image         String?
+  role          Role      @default(ETUDIANT)
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  actif         Boolean   @default(true)
+  fcmToken      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Better Auth
+  sessions      Session[]
+  accounts      Account[]
+
+  // Relations
+  inscriptions        Inscription[]
+  demandesInscriptions DemandeInscription[]
+  echeances           Echeance[]
+  candidatures        Candidature[]
+  notifications       Notification[]
+  notificationsEtats  NotificationEtat[]
+  alertesVues         AlerteVue[]
+  formateur           Formateur?       @relation("UserFormateur")
+  supportMessages     SupportMessage[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                       String    @id @default(cuid())
+  userId                   String
+  accountId                String
+  providerId               String
+  accessToken              String?   @db.Text
+  refreshToken             String?   @db.Text
+  idToken                  String?   @db.Text
+  accessTokenExpiresAt     DateTime?
+  refreshTokenExpiresAt    DateTime?
+  scope                    String?
+  password                 String?   @db.Text
+  issuer                   String?   @db.Text
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verifications")
+}
+
+// ─────────────────────────────────────────
+// STRUCTURE ACADÉMIQUE
+// ─────────────────────────────────────────
+
+model Departement {
+  id          String      @id @default(cuid())
+  nom         String
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  formations  Formation[]
+  bourses     Bourse[]
+
+  @@map("departements")
+}
+
+model Centre {
+  id        String    @id @default(cuid())
+  nom       String
+  ville     String
+  adresse   String?
+  telephone String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  creneaux  Creneau[]
+
+  @@map("centres")
+}
+
+model Creneau {
+  id        String   @id @default(cuid())
+  centreId  String
+  dateHeure DateTime
+  createdAt DateTime @default(now())
+
+  centre    Centre   @relation(fields: [centreId], references: [id], onDelete: Cascade)
+
+  @@map("creneaux")
+}
+
+// ─────────────────────────────────────────
+// FORMATIONS & INSCRIPTIONS
+// ─────────────────────────────────────────
+
+model Formation {
+  id              String          @id @default(cuid())
+  titre           String
+  description     String?         @db.Text
+  departementId   String
+  formateurId     String?
+  prixInscription Float           @default(0)
+  prixMensualite  Float           @default(0)
+  pourcentageFormateur Float      @default(30)
+  dureeMois       Int             @default(1)
+  niveau          String?
+  estBourse       Boolean         @default(false)
+  imageUrl        String?
+  statut          StatutFormation @default(active)
+  datePublication DateTime?
+  dateLimite      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  departement          Departement          @relation(fields: [departementId], references: [id])
+  formateur            Formateur?           @relation(fields: [formateurId], references: [id], onDelete: SetNull)
+  inscriptions         Inscription[]
+  demandesInscriptions DemandeInscription[]
+  echeances            Echeance[]
+  bourses              Bourse[]
+  classeMessages       ClasseMessage[]
+  documentsCours       DocumentCours[]
+
+  @@map("formations")
+}
+
+model Inscription {
+  id              String   @id @default(cuid())
+  userId          String
+  formationId     String
+  statut          String   @default("en_cours") // en_cours | termine | abandonne
+  dateInscription DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formation Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, formationId])
+  @@map("inscriptions")
+}
+
+model DemandeInscription {
+  id          String   @id @default(cuid())
+  userId      String
+  formationId String
+  statut      String   @default("en_attente") // en_attente | valide | refuse
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formation Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, formationId])
+  @@map("demandes_inscriptions")
+}
+
+// ─────────────────────────────────────────
+// CLASSES (contenu pédagogique d'une formation)
+// ─────────────────────────────────────────
+
+// Une formation où l'on est inscrit fait office de « classe » (façon Google
+// Classroom). Ci-dessous son contenu : messages du formateur et documents.
+
+model ClasseMessage {
+  id          String   @id @default(cuid())
+  formationId String
+  auteurNom   String
+  auteurRole  String   @default("Formateur")
+  contenu     String   @db.Text
+  documentNom String?
+  createdAt   DateTime @default(now())
+
+  formation    Formation           @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  commentaires CommentaireClasse[]
+
+  @@map("classe_messages")
+}
+
+model CommentaireClasse {
+  id        String   @id @default(cuid())
+  messageId String
+  auteur    String
+  role      String   @default("Élève")
+  contenu   String   @db.Text
+  createdAt DateTime @default(now())
+
+  message   ClasseMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("commentaires_classe")
+}
+
+model DocumentCours {
+  id          String   @id @default(cuid())
+  formationId String
+  titre       String
+  type        String   @default("PDF") // PDF | Lien | Vidéo | ...
+  url         String?
+  taille      String?
+  createdAt   DateTime @default(now())
+
+  formation   Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+
+  @@map("documents_cours")
+}
+
+// ─────────────────────────────────────────
+// SUPPORT (chat client ↔ support)
+// ─────────────────────────────────────────
+
+// Un fil de discussion par utilisateur (client). `expediteur` indique qui a
+// envoyé le message : le client ou le support.
+model SupportMessage {
+  id           String            @id @default(cuid())
+  userId       String
+  expediteur   ExpediteurSupport
+  contenu      String            @db.Text
+  type         String            @default("texte") // "texte" | "audio"
+  audioUrl     String?
+  documentUrl  String?
+  documentNom  String?
+  dureeSeconds Int?
+  lu           Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("support_messages")
+}
+
+// ─────────────────────────────────────────
+// FORMATEURS & SALAIRES
+// ─────────────────────────────────────────
+
+model Formateur {
+  id             String   @id @default(cuid())
+  nom            String
+  email          String?  @unique
+  telephone      String?
+  specialite     String?
+  salaireMensuel Float    @default(0)
+  actif          Boolean  @default(true)
+  userId         String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User?          @relation("UserFormateur", fields: [userId], references: [id], onDelete: SetNull)
+  formations     Formation[]
+  fichesSalaires FicheSalaire[]
+
+  @@map("formateurs")
+}
+
+model FicheSalaire {
+  id          String   @id @default(cuid())
+  formateurId String
+  mois        String   // ex: "Août 2026"
+  montantDu   Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  formateur  Formateur          @relation(fields: [formateurId], references: [id], onDelete: Cascade)
+  versements VersementSalaire[]
+
+  @@map("fiches_salaires")
+}
+
+model VersementSalaire {
+  id        String   @id @default(cuid())
+  ficheId   String
+  montant   Float
+  date      DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  fiche     FicheSalaire @relation(fields: [ficheId], references: [id], onDelete: Cascade)
+
+  @@map("versements_salaires")
+}
+
+// ─────────────────────────────────────────
+// BOURSES & CANDIDATURES
+// ─────────────────────────────────────────
+
+model Bourse {
+  id              String       @id @default(cuid())
+  formationId     String?
+  departementId   String?
+  titre           String
+  description     String?      @db.Text
+  imageUrl        String?
+  datePublication DateTime
+  dateLimite      DateTime
+  statut          StatutBourse @default(ouverte)
+  documentAdmissionUrl String?
+  documentAdmissionNom String?
+  messageAdmission      String?      @db.Text
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  formation    Formation?        @relation(fields: [formationId], references: [id], onDelete: SetNull)
+  departement  Departement?      @relation(fields: [departementId], references: [id], onDelete: SetNull)
+  champs       ChampFormulaire[]
+  candidatures Candidature[]
+
+  @@map("bourses")
+}
+
+model ChampFormulaire {
+  id          String    @id @default(cuid())
+  bourseId    String
+  label       String
+  type        TypeChamp @default(texte)
+  obligatoire Boolean   @default(false)
+  options     String[]
+  aide        String?
+  cle         String?
+  ordre       Int       @default(0)
+
+  bourse      Bourse    @relation(fields: [bourseId], references: [id], onDelete: Cascade)
+
+  @@map("champs_formulaires")
+}
+
+model Candidature {
+  id        String          @id @default(cuid())
+  bourseId  String
+  userId    String
+  nom       String
+  email     String
+  statut    StatutAdmission @default(enAttente)
+  dateDepot DateTime        @default(now())
+  reponses  Json            @default("{}")
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  bourse    Bourse @relation(fields: [bourseId], references: [id], onDelete: Cascade)
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bourseId, userId])
+  @@map("candidatures")
+}
+
+// ─────────────────────────────────────────
+// PAIEMENTS & ÉCHÉANCES
+// ─────────────────────────────────────────
+
+model Echeance {
+  id           String    @id @default(cuid())
+  userId       String
+  formationId  String
+  libelle      String
+  montantDu    Float
+  montantPaye  Float     @default(0)
+  dateEcheance DateTime
+  datePaiement DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formation  Formation  @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  paiements  PaiementHistorique[]
+
+  @@map("echeances")
+}
+
+model PaiementHistorique {
+  id         String   @id @default(cuid())
+  echeanceId String
+  montant    Float
+  date       DateTime
+  note       String?
+  createdAt  DateTime @default(now())
+
+  echeance   Echeance @relation(fields: [echeanceId], references: [id], onDelete: Cascade)
+
+  @@map("paiements_historique")
+}
+
+// ─────────────────────────────────────────
+// ACTUALITÉS (FIL APP MOBILE)
+// ─────────────────────────────────────────
+
+model Post {
+  id          String   @id @default(cuid())
+  auteurId    String?
+  auteurNom   String
+  role        String   @default("Admin")
+  contenu     String   @db.Text
+  documentNom String?
+  likes       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  medias       Media[]
+  actions      ActionPost[]
+  commentaires Commentaire[]
+
+  @@map("posts")
+}
+
+model Media {
+  id     String    @id @default(cuid())
+  postId String
+  type   TypeMedia
+  url    String
+  nom    String?
+
+  post   Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("medias")
+}
+
+model ActionPost {
+  id     String @id @default(cuid())
+  postId String
+  label  String
+  cible  String // resultats | bourses | paiements | formations
+
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("actions_posts")
+}
+
+model Commentaire {
+  id        String   @id @default(cuid())
+  postId    String
+  parentId  String?
+  auteur    String
+  role      String   @default("Élève")
+  contenu   String   @db.Text
+  createdAt DateTime @default(now())
+
+  post     Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent   Commentaire?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  reponses Commentaire[] @relation("Replies")
+
+  @@map("commentaires")
+}
+
+// ─────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String?
+  type      TypeNotification
+  titre     String
+  message   String           @db.Text
+  lu        Boolean          @default(false)
+  cible     String           @default("global")
+  cibleId   String?
+  cibleNom  String?
+  envoyePar String?
+  documentUrl String?
+  documentNom String?
+  createdAt DateTime         @default(now())
+
+  user      User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  etats     NotificationEtat[]
+
+  @@map("notifications")
+}
+
+// État d'une notification PARTAGÉE (globale, formation…) pour un utilisateur :
+// lue et/ou masquée par lui seul, sans toucher aux autres destinataires.
+// Les notifications personnelles (userId renseigné) gardent leur champ `lu`.
+model NotificationEtat {
+  notificationId String
+  userId         String
+  lu             Boolean  @default(false)
+  masquee        Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([notificationId, userId])
+  @@index([userId])
+  @@map("notifications_etats")
+}
+
+// Mémorisation permanente dans la base de données des messages et alertes
+// modales déjà consultés / fermés par l'utilisateur (synchronisation multi-appareils).
+model AlerteVue {
+  id        String   @id @default(cuid())
+  userId    String
+  alerteId  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, alerteId])
+  @@index([userId])
+  @@map("alertes_vues")
+}
+

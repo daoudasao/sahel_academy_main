@@ -1,0 +1,6 @@
+{
+  "$comment": "Réécritures SPA : toute route inconnue renvoie index.html. Sans effet avec la stratégie d'URL par hash (défaut Flutter), utile si on passe plus tard en URLs propres (usePathUrlStrategy). Les fichiers statiques existants (main.dart.js, canvaskit, manifest.json…) restent servis en priorité.",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

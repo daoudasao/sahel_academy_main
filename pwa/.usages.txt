@@ -1,0 +1,16 @@
+app.dart
+features/paiements/paiement_detail_screen.dart
+data/repositories/formation_repository.dart
+features/formations/formations_screen.dart
+features/paiements/paiements_screen.dart
+features/bourses/bourses_screen.dart
+features/candidature/candidature_screen.dart
+features/formations/formation_detail_screen.dart
+features/profil/mes_documents_screen.dart
+features/mes_formations/classe_screen.dart
+features/mes_formations/mes_formations_screen.dart
+--- methods ---
+repo.getDepartementParId
+repo.getDepartements
+repo.getFormationParId
+repo.rechercher

@@ -1,0 +1,39 @@
+# Stack Portainer — API NestJS (méthode « Repository » : Portainer build depuis GitHub).
+# Base de données : Neon externe (renseigner DATABASE_URL dans les variables du stack).
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sahel_academy_backend
+    restart: always
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-}
+      ADMIN_URL: ${ADMIN_URL:-}
+      VERIF_URL: ${VERIF_URL:-}
+      WEB_URL: ${WEB_URL:-}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_ID_ANDROID: ${GOOGLE_CLIENT_ID_ANDROID:-}
+      GOOGLE_CLIENT_ID_IOS: ${GOOGLE_CLIENT_ID_IOS:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+      APPLE_CLIENT_SECRET: ${APPLE_CLIENT_SECRET:-}
+      FIREBASE_ADMIN_CREDENTIALS_BASE64: ${FIREBASE_ADMIN_CREDENTIALS_BASE64:-}
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
+      BUNNY_ACCESS_KEY: ${BUNNY_ACCESS_KEY:-}
+      BUNNY_STORAGE_ZONE: ${BUNNY_STORAGE_ZONE:-}
+      BUNNY_STORAGE_ENDPOINT: ${BUNNY_STORAGE_ENDPOINT:-}
+      BUNNY_CDN_DOMAIN: ${BUNNY_CDN_DOMAIN:-}
+      SWAGGER_USER: ${SWAGGER_USER:-}
+      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}

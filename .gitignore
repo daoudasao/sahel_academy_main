@@ -1,0 +1,25 @@
+# Dépendances / artefacts de build
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/.dart_tool/
+**/*.tsbuildinfo
+
+# Secrets / environnement (ne JAMAIS committer)
+**/.env
+**/.env.*
+!**/.env.example
+**/*.local
+**/*adminsdk*.json
+**/*serviceAccount*.json
+**/*.pem
+**/*.p8
+**/*.jks
+**/*.keystore
+**/key.properties
+
+# Divers
+**/.DS_Store
+**/*.log
+.claude/

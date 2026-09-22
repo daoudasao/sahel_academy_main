@@ -1,0 +1,21 @@
+# Stack Portainer — Site Next.js (dashboard admin + pages publiques).
+# Méthode « Repository » : Portainer build depuis GitHub.
+# Base de données : Neon externe. Les NEXT_PUBLIC_* sont figées au BUILD.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # URL PUBLIQUES du serveur (figées dans le bundle au build) :
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+        NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
+    container_name: sahel_academy_web
+    restart: always
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: ${DATABASE_URL:-}

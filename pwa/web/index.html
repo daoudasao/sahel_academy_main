@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Sahel Academy — tes formations, tes cours et toutes les infos au même endroit.">
+
+  <!-- Affichage mobile / PWA plein écran -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0A2D26">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sahel Academy">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Sahel Academy</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Google Sign-In (web) : l'identifiant client est normalement passé au
+       build via --dart-define=GOOGLE_WEB_CLIENT_ID=... (voir GOOGLE_SIGNIN.md).
+       En alternative, décommenter la balise ci-dessous et y coller le client
+       OAuth « Application Web ». Le --dart-define a la priorité.
+  <meta name="google-signin-client_id" content="XXXXXXXX.apps.googleusercontent.com"> -->
+
+  <!-- Google Analytics 4 (mesure installs / usage PWA / visiteurs) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SSCDFSNSYC"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-SSCDFSNSYC');
+  </script>
+
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #0A2D26; }
+    /* Écran de chargement branché, affiché pendant le boot de Flutter,
+       puis masqué au premier rendu (événement flutter-first-frame). */
+    #sa-loader {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(120% 120% at 50% 0%, #0F3B32 0%, #0A2D26 55%, #08221C 100%);
+      transition: opacity .35s ease; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    }
+    #sa-loader.hidden { opacity: 0; pointer-events: none; }
+    #sa-loader img { width: 96px; height: 96px; object-fit: contain; }
+    #sa-loader .sa-spinner {
+      margin-top: 28px; width: 34px; height: 34px; border-radius: 50%;
+      border: 3px solid rgba(234,179,8,.25); border-top-color: #EAB308;
+      animation: sa-spin .8s linear infinite;
+    }
+    @keyframes sa-spin { to { transform: rotate(360deg); } }
+
+    /* ===== Portail d'installation PWA (navigateur non installé) ===== */
+    #sa-gate {
+      position: fixed; inset: 0; z-index: 10000; display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 28px; box-sizing: border-box; text-align: center; color: #fff;
+      background: radial-gradient(120% 120% at 50% 0%, #0F3B32 0%, #0A2D26 55%, #08221C 100%);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      overflow-y: auto;
+    }
+    #sa-gate .sa-card { width: 100%; max-width: 460px; }
+    #sa-gate img.sa-logo { width: 100px; height: 100px; object-fit: contain; margin-bottom: 20px; }
+    #sa-gate h1 { font-size: 25px; line-height: 1.25; margin: 0 0 10px; font-weight: 800; letter-spacing: -.5px; }
+    #sa-gate h1 .sa-gold { color: #EAB308; }
+    #sa-gate p.sa-sub { font-size: 14.5px; line-height: 1.55; margin: 0 0 24px; color: rgba(255,255,255,.78); }
+    #sa-gate .sa-feats { display: flex; flex-direction: column; gap: 11px; margin: 0 0 26px; text-align: left; }
+    #sa-gate .sa-feat { display: flex; align-items: center; gap: 12px; font-size: 14px; color: rgba(255,255,255,.9); }
+    #sa-gate .sa-feat .sa-ic {
+      flex: 0 0 auto; width: 34px; height: 34px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      background: rgba(234,179,8,.14); border: 1px solid rgba(234,179,8,.3);
+    }
+
+    /* Boutons */
+    #sa-gate button, #sa-gate a.sa-btn {
+      display: block; width: 100%; box-sizing: border-box; text-decoration: none;
+      border: 0; cursor: pointer; padding: 16px 20px; border-radius: 16px;
+      font-size: 16px; font-weight: 800; font-family: inherit; text-align: center;
+      transition: transform .12s ease, box-shadow .12s ease; margin-bottom: 12px;
+    }
+    #sa-gate .sa-btn-primary { background: #EAB308; color: #0A2D26; box-shadow: 0 10px 24px rgba(234,179,8,.28); }
+    #sa-gate .sa-btn-primary:active { transform: translateY(1px) scale(.995); }
+    #sa-gate .sa-btn-secondary { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.18); }
+
+    /* Blocs d'instructions */
+    #sa-gate .sa-steps {
+      margin-top: 6px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px; padding: 16px 18px; text-align: left;
+    }
+    #sa-gate .sa-steps h2 { font-size: 13.5px; margin: 0 0 10px; color: #EAB308; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; }
+    #sa-gate .sa-steps ol, #sa-gate .sa-steps ul { margin: 0; padding-left: 20px; }
+    #sa-gate .sa-steps li { font-size: 13.5px; line-height: 1.7; color: rgba(255,255,255,.88); }
+
+    /* Bloc alerte (navigateur non compatible) */
+    #sa-gate .sa-warn {
+      background: rgba(234,179,8,.10); border: 1px solid rgba(234,179,8,.4);
+      border-radius: 16px; padding: 16px 18px; text-align: left; margin-bottom: 16px;
+    }
+    #sa-gate .sa-warn p { margin: 0; font-size: 14px; line-height: 1.6; color: #fff; }
+    #sa-gate .sa-warn strong { color: #EAB308; }
+
+    #sa-gate .sa-hint { margin-top: 16px; font-size: 12px; color: rgba(255,255,255,.42); }
+    #sa-gate .sa-hidden { display: none !important; }
+    #sa-toast {
+      position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+      background: #EAB308; color: #0A2D26; font-weight: 800; font-size: 14px;
+      padding: 12px 22px; border-radius: 999px; z-index: 10001; opacity: 0;
+      transition: opacity .25s ease; pointer-events: none; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    }
+    #sa-toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <!-- Écran de chargement (boot Flutter en mode installé) -->
+  <div id="sa-loader">
+    <img src="icons/Icon-192.png" alt="Sahel Academy">
+    <div class="sa-spinner"></div>
+  </div>
+
+  <!-- Portail d'installation (navigateur non installé) -->
+  <div id="sa-gate">
+    <div class="sa-card">
+      <img class="sa-logo" src="icons/Icon-192.png" alt="Sahel Academy">
+      <h1>Installe l'app <span class="sa-gold">Sahel&nbsp;Academy</span></h1>
+      <p class="sa-sub" id="sa-subtitle">Pour profiter de l'application, installe-la sur ton appareil. Elle s'ouvre en plein écran, se lance plus vite et reçoit les notifications.</p>
+
+      <div class="sa-feats">
+        <div class="sa-feat"><span class="sa-ic">⚡</span> Plus rapide, sans barre de navigateur</div>
+        <div class="sa-feat"><span class="sa-ic">🔔</span> Notifications des formations & bourses</div>
+        <div class="sa-feat"><span class="sa-ic">📱</span> Une icône sur ton écran d'accueil</div>
+      </div>
+
+      <!-- ============ Blocs affichés selon l'appareil ============ -->
+
+      <!-- A) Navigateur intégré (WhatsApp, Instagram, Facebook, webview…) -->
+      <div id="sa-block-inapp" class="sa-hidden">
+        <div class="sa-warn">
+          <p>⚠️ Tu es dans le navigateur d'une autre app (WhatsApp, Instagram…). L'installation n'est pas possible ici.<br><br>Ouvre ce lien dans <strong>Chrome</strong> (Android) ou <strong>Safari</strong> (iPhone).</p>
+        </div>
+        <a id="sa-inapp-chrome" class="sa-btn sa-btn-primary sa-hidden">🌐 Ouvrir dans Chrome</a>
+        <button id="sa-inapp-copy" class="sa-btn-secondary">📋 Copier le lien</button>
+        <div class="sa-steps">
+          <h2>Sinon, manuellement</h2>
+          <ol>
+            <li>Touche le menu <strong>⋮</strong> (ou <strong>•••</strong>) en haut.</li>
+            <li>Choisis <strong>« Ouvrir dans le navigateur »</strong>.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- B) Android + Chrome : invite native -->
+      <div id="sa-block-android-chrome" class="sa-hidden">
+        <button id="sa-install-btn" class="sa-btn-primary sa-hidden">📲 Installer l'application</button>
+        <div id="sa-android-manual" class="sa-steps sa-hidden">
+          <h2>Installer l'application</h2>
+          <ol>
+            <li>Ouvre le menu <strong>⋮</strong> de Chrome (en haut à droite).</li>
+            <li>Choisis <strong>« Installer l'application »</strong>.</li>
+            <li>Ouvre-la ensuite depuis ton tiroir d'applications.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- C) Android autre navigateur (Samsung Internet, etc.) -->
+      <div id="sa-block-android-other" class="sa-hidden">
+        <div class="sa-warn">
+          <p>Pour une installation fiable (vraie app dans le tiroir, sans logo navigateur), ouvre ce lien dans <strong>Google Chrome</strong>.</p>
+        </div>
+        <a id="sa-other-chrome" class="sa-btn sa-btn-primary">🌐 Ouvrir dans Chrome</a>
+        <button id="sa-other-copy" class="sa-btn-secondary">📋 Copier le lien</button>
+      </div>
+
+      <!-- D) iOS (Safari, Chrome, Edge…) : ajout via le bouton Partager -->
+      <div id="sa-block-ios-safari" class="sa-hidden">
+        <div class="sa-steps">
+          <h2>Installer sur iPhone / iPad</h2>
+          <ol>
+            <li>Touche le bouton <strong>Partager</strong> <span aria-hidden="true">⬆️</span> (en bas dans Safari, en haut dans Chrome).</li>
+            <li>Fais défiler et choisis <strong>« Sur l'écran d'accueil »</strong>.</li>
+            <li>Touche <strong>Ajouter</strong>, puis ouvre l'app depuis l'écran d'accueil.</li>
+          </ol>
+          <p style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.72);">Fonctionne aussi bien dans <strong>Safari</strong> que dans <strong>Chrome</strong> ou <strong>Edge</strong> sur iPhone.</p>
+        </div>
+      </div>
+
+      <!-- F) Desktop -->
+      <div id="sa-block-desktop" class="sa-hidden">
+        <button id="sa-install-btn-desktop" class="sa-btn-primary sa-hidden">📲 Installer l'application</button>
+        <div id="sa-desktop-manual" class="sa-steps sa-hidden">
+          <h2>Installer l'application</h2>
+          <ol>
+            <li>Clique sur l'icône <strong>d'installation</strong> ⊕ dans la barre d'adresse (à droite),</li>
+            <li>ou menu <strong>⋮</strong> → <strong>« Installer Sahel Academy »</strong> (Chrome / Edge).</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Message après installation -->
+      <div id="sa-installed" class="sa-steps sa-hidden">
+        <h2>✅ Application installée</h2>
+        <ul><li>Ouvre <strong>Sahel Academy</strong> depuis ton écran d'accueil pour te connecter.</li></ul>
+      </div>
+
+      <p class="sa-hint">En continuant, tu acceptes nos conditions d'utilisation.</p>
+    </div>
+  </div>
+
+  <div id="sa-toast">Lien copié ✅</div>
+
+  <script>
+    (function () {
+      var ua = window.navigator.userAgent || '';
+
+      // Envoi sécurisé d'un événement GA4 (ignoré si gtag bloqué/absent).
+      function track(name, params) {
+        try { if (window.gtag) window.gtag('event', name, params || {}); } catch (e) {}
+      }
+
+      // Retour du flux OAuth : le backend renvoie ici avec `#ott=…` (ou
+      // `#erreur=…`). Il faut démarrer Flutter pour consommer le jeton, même
+      // si le navigateur ne se déclare pas en mode « installé » — certains
+      // parcours (onglet Chrome personnalisé, Safari) perdent le display-mode
+      // au retour.
+      function isRetourOAuth() {
+        var h = window.location.hash || '';
+        return h.indexOf('ott=') !== -1 || h.indexOf('erreur=') !== -1;
+      }
+
+      // Developpement local : on ne bloque pas sur le portail d'installation,
+      // sinon impossible de tester la PWA (dont le retour Google) avec
+      // `flutter run -d chrome`. Sans effet en production.
+      function isDevLocal() {
+        var h = window.location.hostname;
+        return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+      }
+
+      function isStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches
+          || window.matchMedia('(display-mode: fullscreen)').matches
+          || window.matchMedia('(display-mode: minimal-ui)').matches
+          || window.navigator.standalone === true
+          || document.referrer.startsWith('android-app://');
+      }
+
+      function bootFlutter() {
+        // L'app installée est lancée (mode standalone) = usage réel de la PWA.
+        track('app_opened_standalone');
+        window.addEventListener('flutter-first-frame', function () {
+          var loader = document.getElementById('sa-loader');
+          if (loader) {
+            loader.classList.add('hidden');
+            setTimeout(function () { loader.remove(); }, 400);
+          }
+        });
+        var s = document.createElement('script');
+        s.src = 'flutter_bootstrap.js';
+        s.async = true;
+        document.body.appendChild(s);
+      }
+
+      // ---- Détection de l'environnement ----
+      function detect() {
+        var isIOS = /iphone|ipad|ipod/i.test(ua)
+          || (/Macintosh/i.test(ua) && 'ontouchend' in document); // iPadOS moderne
+        var isAndroid = /android/i.test(ua);
+
+        // Navigateurs "in-app" (webview d'une autre application)
+        var inApp = /FBAN|FBAV|FB_IAB|Instagram|Line\/|Twitter|LinkedInApp|Snapchat|Pinterest|MicroMessenger|WhatsApp|GSA\//i.test(ua)
+          || /;\s?wv\)/i.test(ua)          // webview Android générique
+          || /\bwv\b/i.test(ua);
+
+        // iOS : distinguer Safari des autres (Chrome iOS = CriOS, Firefox = FxiOS, etc.)
+        var iosOtherBrowser = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|mercury/i.test(ua);
+        var isIOSSafari = isIOS && !iosOtherBrowser && /Safari/i.test(ua) && !inApp;
+
+        // Android : Chrome réel vs Samsung Internet / autres
+        var isSamsung = /SamsungBrowser/i.test(ua);
+        var isChromeAndroid = isAndroid && /Chrome\//i.test(ua)
+          && !isSamsung
+          && !/EdgA|OPR\/|OPT\/|Brave|DuckDuckGo|YaBrowser|MiuiBrowser|HeyTap|UCBrowser/i.test(ua)
+          && !inApp;
+
+        var isDesktop = !isIOS && !isAndroid;
+
+        return {
+          isIOS: isIOS, isAndroid: isAndroid, inApp: inApp,
+          isIOSSafari: isIOSSafari, iosOtherBrowser: iosOtherBrowser,
+          isSamsung: isSamsung, isChromeAndroid: isChromeAndroid,
+          isDesktop: isDesktop
+        };
+      }
+
+      function show(id) { var el = document.getElementById(id); if (el) el.classList.remove('sa-hidden'); }
+
+      function toast(msg) {
+        var t = document.getElementById('sa-toast');
+        if (!t) return;
+        t.textContent = msg; t.classList.add('show');
+        setTimeout(function () { t.classList.remove('show'); }, 1800);
+      }
+
+      function copyLink() {
+        var url = window.location.origin + '/';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function () { toast('Lien copié ✅'); })
+            .catch(function () { toast(url); });
+        } else {
+          var i = document.createElement('input');
+          i.value = url; document.body.appendChild(i); i.select();
+          try { document.execCommand('copy'); toast('Lien copié ✅'); } catch (e) { toast(url); }
+          document.body.removeChild(i);
+        }
+      }
+
+      function chromeIntentUrl() {
+        // Force l'ouverture dans Chrome sur Android via une URL intent.
+        return 'intent://' + window.location.host + '/#Intent;scheme=https;package=com.android.chrome;end';
+      }
+
+      // Invite native d'installation (Android Chrome + desktop)
+      function wireInstallPrompt(btnId, manualId) {
+        var btn = document.getElementById(btnId);
+        var manual = document.getElementById(manualId);
+        var deferredPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+          if (btn) btn.classList.remove('sa-hidden');
+          if (manual) manual.classList.add('sa-hidden');
+        });
+
+        if (btn) btn.addEventListener('click', function () {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.finally(function () { deferredPrompt = null; });
+        });
+
+        window.addEventListener('appinstalled', function () {
+          track('pwa_installed');
+          if (btn) btn.classList.add('sa-hidden');
+          if (manual) manual.classList.add('sa-hidden');
+          show('sa-installed');
+        });
+
+        // Si l'invite n'arrive pas (~1,8 s), on affiche les instructions manuelles.
+        setTimeout(function () {
+          if (deferredPrompt === null && btn && btn.classList.contains('sa-hidden')
+              && document.getElementById('sa-installed').classList.contains('sa-hidden')) {
+            if (manual) manual.classList.remove('sa-hidden');
+          }
+        }, 1800);
+      }
+
+      function showGate() {
+        var loader = document.getElementById('sa-loader');
+        if (loader) loader.remove();
+        document.getElementById('sa-gate').style.display = 'flex';
+
+        var env = detect();
+
+        // Vue du portail d'installation, segmentée par plateforme.
+        track('install_gate_view', {
+          platform: env.inApp ? 'in_app' : (env.isIOS ? 'ios' : (env.isAndroid ? 'android' : 'desktop')),
+          browser: env.isChromeAndroid ? 'android_chrome'
+            : env.isSamsung ? 'samsung_internet'
+            : env.isIOSSafari ? 'ios_safari'
+            : env.inApp ? 'in_app_webview' : 'other'
+        });
+
+        // SW dédié (avec handler fetch) pour rendre la PWA installable / générer
+        // le WebAPK Android — sans démarrer Flutter. NE PAS enregistrer
+        // flutter_service_worker.js ici : c'est un stub qui se désinscrit seul
+        // et recharge la page (donc pas de handler fetch → non installable).
+        if ('serviceWorker' in navigator && !env.inApp) {
+          navigator.serviceWorker.register('sw.js').catch(function () {});
+        }
+
+        // Boutons "copier le lien"
+        ['sa-inapp-copy', 'sa-other-copy', 'sa-ios-copy'].forEach(function (id) {
+          var b = document.getElementById(id);
+          if (b) b.addEventListener('click', copyLink);
+        });
+
+        if (env.inApp) {
+          show('sa-block-inapp');
+          if (env.isAndroid) {
+            var a = document.getElementById('sa-inapp-chrome');
+            a.href = chromeIntentUrl();
+            a.classList.remove('sa-hidden');
+          }
+          return;
+        }
+
+        if (env.isIOS) {
+          // Depuis iOS 16.4, l'ajout à l'écran d'accueil marche aussi dans
+          // Chrome, Edge… via le bouton Partager (plus seulement Safari).
+          show('sa-block-ios-safari');
+          return;
+        }
+
+        if (env.isAndroid) {
+          if (env.isChromeAndroid) {
+            show('sa-block-android-chrome');
+            wireInstallPrompt('sa-install-btn', 'sa-android-manual');
+          } else {
+            show('sa-block-android-other');
+            document.getElementById('sa-other-chrome').href = chromeIntentUrl();
+          }
+          return;
+        }
+
+        // Desktop
+        show('sa-block-desktop');
+        wireInstallPrompt('sa-install-btn-desktop', 'sa-desktop-manual');
+      }
+
+      // ─── Récupération après perte de la surface de dessin ───
+      // Sur Android, lancer le sélecteur de fichiers (ou un appel entrant)
+      // peut faire reprendre la mémoire graphique de la page par le système.
+      // Flutter perd alors son contexte WebGL : l'écran reste noir et figé.
+      // On recharge dès le retour dans l'app, au plus une fois par minute pour
+      // écarter tout risque de boucle.
+      (function () {
+        var perdu = false;
+
+        function recharger() {
+          var dernier = 0;
+          try { dernier = parseInt(sessionStorage.getItem('sa_reload_webgl') || '0', 10); } catch (e) {}
+          if (Date.now() - dernier < 60000) return;
+          try { sessionStorage.setItem('sa_reload_webgl', String(Date.now())); } catch (e) {}
+          window.location.reload();
+        }
+
+        document.addEventListener('webglcontextlost', function (e) {
+          e.preventDefault(); // sans ça, le contexte ne peut jamais revenir
+          perdu = true;
+          if (document.visibilityState === 'visible') recharger();
+        }, true);
+
+        document.addEventListener('webglcontextrestored', function () {
+          perdu = false;
+        }, true);
+
+        document.addEventListener('visibilitychange', function () {
+          if (perdu && document.visibilityState === 'visible') recharger();
+        });
+      })();
+
+      if (isStandalone() || isRetourOAuth() || isDevLocal()) { bootFlutter(); }
+      else { showGate(); }
+    })();
+  </script>
+</body>
+</html>

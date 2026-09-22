@@ -1,0 +1,21 @@
+node_modules
+dist
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.agents
+.claude
+.windsurf
+coverage
+test
+*.md
+# Clés et secrets : jamais dans le contexte de build
+*adminsdk*.json
+*.pem
+*.p8
+*.key

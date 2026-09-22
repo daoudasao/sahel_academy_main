@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.sahelacademy.app",
+        "paths": [ "/app/*" ]
+      }
+    ]
+  }
+}

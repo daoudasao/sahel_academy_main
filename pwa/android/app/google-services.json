@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "326315783454",
+    "project_id": "sahel-academy",
+    "storage_bucket": "sahel-academy.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:326315783454:android:0cbc0414ab085c195a050f",
+        "android_client_info": {
+          "package_name": "com.sahelacademy.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSNr8X8Guia8tv-5oCIWJzhAtpmj98ppY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

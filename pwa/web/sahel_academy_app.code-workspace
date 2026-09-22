@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../sahel_academy_verif"
+		},
+		{
+			"path": "../../sahel_academy_backend"
+		},
+		{
+			"path": "../../sahel_academy"
+		}
+	],
+	"settings": {}
+}

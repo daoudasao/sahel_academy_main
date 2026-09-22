@@ -1,0 +1,16 @@
+build
+.dart_tool
+.idea
+.git
+.gitignore
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+android
+ios
+linux
+macos
+windows
+test
+*.log
+.DS_Store
