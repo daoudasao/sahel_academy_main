@@ -73,7 +73,7 @@ services:
       context: ./pwa
       dockerfile: Dockerfile
       args:
-        FLUTTER_VERSION: ${FLUTTER_VERSION:-3.44.4}
+        FLUTTER_VERSION: ${FLUTTER_VERSION:-stable}
         API_URL: ${API_URL:-http://localhost:3001/api/v1}
         WEB_PUSH_VAPID_KEY: ${WEB_PUSH_VAPID_KEY:-}
         GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
