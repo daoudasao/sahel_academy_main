@@ -43,10 +43,11 @@ services:
       BUNNY_CDN_DOMAIN: ${BUNNY_CDN_DOMAIN:-}
       SWAGGER_USER: ${SWAGGER_USER:-}
       SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}
-    # Un seul réseau : 'sahel-network' (a Internet → Neon). Le nginx-proxy-manager
-    # y sera connecté aussi, pour joindre ce conteneur par son nom. Un seul lien
-    # réseau = moins d'écritures (la base réseau du serveur est fragile).
-    networks: [sahel-network]
+    # CONTOURNEMENT : mode host (aucun 'endpoint' réseau écrit → esquive la base
+    # local-kv.db corrompue du serveur). Le backend écoute directement sur le
+    # port 3001 de l'hôte, avec Internet (→ Neon). À restaurer en réseau propre
+    # une fois le serveur réparé.
+    network_mode: host
 
   # ── 2. Site Next.js (dashboard admin + pages publiques) ──
   # NB : les NEXT_PUBLIC_* sont figées au BUILD (URL publiques du serveur).
@@ -59,15 +60,15 @@ services:
         NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
     container_name: sahel_academy_web
     restart: always
-    # Pas de port publié : le nginx-proxy-manager joint ce conteneur par son
-    # nom (sahel_academy_web:3000) sur le réseau partagé common_net.
+    # CONTOURNEMENT : mode host (voir backend). Le site écoute sur le port 8480
+    # de l'hôte (3000 est déjà pris sur ce serveur mutualisé).
     environment:
       NODE_ENV: production
-      PORT: "3000"
+      PORT: "8480"
       HOSTNAME: "0.0.0.0"
       DATABASE_URL: ${DATABASE_URL:-}
     depends_on: [backend]
-    networks: [sahel-network]
+    network_mode: host
 
   # ── 3. PWA Flutter (web) servie par nginx ── DÉSACTIVÉ POUR L'INSTANT ──
   # Le build Flutter pose problème sur ce serveur (archi/registre). On déploie
@@ -92,9 +93,6 @@ services:
   #     - "${PWA_PORT:-8080}:80"
   #   networks: [sahel]
 
-networks:
-  # Réseau créé à la main (Portainer), avec Internet (→ Neon). Le proxy y sera
-  # connecté aussi (Portainer → conteneur NPM → Join network → sahel-network),
-  # pour joindre backend et web par leur nom. 'external' = le stack ne le crée pas.
-  sahel-network:
-    external: true
+# (Aucun réseau déclaré : les 2 services sont en network_mode: host pour
+#  contourner la corruption réseau du serveur. Setup à restaurer une fois
+#  local-kv.db réparé côté hôte.)
