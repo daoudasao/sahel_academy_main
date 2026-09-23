@@ -186,9 +186,11 @@ export default function NouvelleboursePage() {
       setCreatedBourse(res);
       setSaved(true);
       if (res?.id) {
+        // Domaine réel d'abord (la page /bourses/[id] est sur ce site) ;
+        // NEXT_PUBLIC_VERIF_URL n'est qu'un repli.
         const origin = typeof window !== "undefined" ? window.location.origin : "";
-        const verifBaseUrl = (process.env.NEXT_PUBLIC_VERIF_URL || origin).replace(/\/$/, "");
-        const url = verifBaseUrl ? `${verifBaseUrl}/bourses/${res.id}` : `/bourses/${res.id}`;
+        const baseUrl = (origin || process.env.NEXT_PUBLIC_VERIF_URL || "").replace(/\/$/, "");
+        const url = baseUrl ? `${baseUrl}/bourses/${res.id}` : `/bourses/${res.id}`;
         navigator.clipboard.writeText(url);
       }
       setTimeout(() => router.push("/dashboard/bourses"), 1500);

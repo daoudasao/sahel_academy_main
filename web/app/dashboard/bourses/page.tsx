@@ -41,9 +41,11 @@ export default function BoursesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCopyLink = (bourseId: string) => {
+    // On privilégie le domaine réel (origin) : la page /bourses/[id] est sur ce
+    // même site. NEXT_PUBLIC_VERIF_URL n'est qu'un repli (SSR / valeur figée).
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const verifBaseUrl = (process.env.NEXT_PUBLIC_VERIF_URL || origin).replace(/\/$/, "");
-    const url = verifBaseUrl ? `${verifBaseUrl}/bourses/${bourseId}` : `/bourses/${bourseId}`;
+    const baseUrl = (origin || process.env.NEXT_PUBLIC_VERIF_URL || "").replace(/\/$/, "");
+    const url = baseUrl ? `${baseUrl}/bourses/${bourseId}` : `/bourses/${bourseId}`;
     navigator.clipboard.writeText(url);
     setCopiedId(bourseId);
     setTimeout(() => setCopiedId(null), 2000);
