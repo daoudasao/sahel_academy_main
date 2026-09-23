@@ -43,7 +43,9 @@ services:
       BUNNY_CDN_DOMAIN: ${BUNNY_CDN_DOMAIN:-}
       SWAGGER_USER: ${SWAGGER_USER:-}
       SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}
-    networks: [common_net]
+    # 2 réseaux : 'default' (créé par le stack, a Internet → accès Neon) +
+    # 'common_net' (partagé avec le proxy → joignable par son nom).
+    networks: [default, common_net]
 
   # ── 2. Site Next.js (dashboard admin + pages publiques) ──
   # NB : les NEXT_PUBLIC_* sont figées au BUILD (URL publiques du serveur).
@@ -64,7 +66,7 @@ services:
       HOSTNAME: "0.0.0.0"
       DATABASE_URL: ${DATABASE_URL:-}
     depends_on: [backend]
-    networks: [common_net]
+    networks: [default, common_net]
 
   # ── 3. PWA Flutter (web) servie par nginx ── DÉSACTIVÉ POUR L'INSTANT ──
   # Le build Flutter pose problème sur ce serveur (archi/registre). On déploie
