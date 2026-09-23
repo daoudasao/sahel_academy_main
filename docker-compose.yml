@@ -47,11 +47,6 @@ services:
       BUNNY_CDN_DOMAIN: ${BUNNY_CDN_DOMAIN:-}
       SWAGGER_USER: ${SWAGGER_USER:-}
       SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}
-    # CONTOURNEMENT : mode host (aucun 'endpoint' réseau écrit → esquive la base
-    # local-kv.db corrompue du serveur). Le backend écoute directement sur le
-    # port 3001 de l'hôte, avec Internet (→ Neon). À restaurer en réseau propre
-    # une fois le serveur réparé.
-    network_mode: host
 
   # ── 2. Site Next.js (dashboard admin + pages publiques) ──
   # NB : les NEXT_PUBLIC_* sont figées au BUILD (URL publiques du serveur).
