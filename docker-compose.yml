@@ -13,9 +13,9 @@ services:
       dockerfile: Dockerfile
     container_name: sahel_academy_backend
     restart: always
-    # Reseau du nginx-proxy-manager (a une passerelle Internet -> Neon en IPv4,
-    # et le proxy joint ce conteneur par son nom : sahel_academy_backend:3001).
-    networks: [bridge_public_npm]
+    # 2 reseaux : common_net (partage avec le proxy -> joint par son nom) +
+    # sahel-network (a une passerelle Internet -> Neon en IPv4).
+    networks: [common_net, sahel-network]
     environment:
       NODE_ENV: production
       PORT: "3001"
@@ -56,9 +56,8 @@ services:
         NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
     container_name: sahel_academy_web
     restart: always
-    # Reseau du nginx-proxy-manager (proxy le joint par son nom
-    # sahel_academy_web:3000, et ce reseau a Internet).
-    networks: [bridge_public_npm]
+    # 2 reseaux : common_net (proxy par nom) + sahel-network (Internet).
+    networks: [common_net, sahel-network]
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -90,8 +89,10 @@ services:
   #   networks: [sahel]
 
 networks:
-  # Réseau du nginx-proxy-manager, déjà présent (external). Il a une passerelle
-  # Internet (→ Neon en IPv4) ET le proxy y est → il joint nos conteneurs par
-  # leur nom. Un seul réseau = une seule écriture d'endpoint.
-  bridge_public_npm:
+  # Partagé avec le nginx-proxy-manager (le proxy joint nos conteneurs par leur
+  # nom via ce réseau). INTERNE : pas d'Internet, sert uniquement au proxy.
+  common_net:
+    external: true
+  # Réseau créé à la main, AVEC passerelle Internet (→ Neon en IPv4).
+  sahel-network:
     external: true
