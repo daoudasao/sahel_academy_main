@@ -13,13 +13,12 @@ services:
       dockerfile: Dockerfile
     container_name: sahel_academy_backend
     restart: always
-    # Mode bridge par defaut : SEUL mode qui se deploie de facon fiable (les
-    # attaches a un reseau nomme echouent -> base local-kv.db corrompue cote hote).
-    # IPv4-only => Neon joignable en IPv4. Port publie sur l'hote.
-    # NB : l'acces public via le proxy reste a finaliser une fois le serveur repare.
-    network_mode: bridge
-    ports:
-      - "${BACKEND_PORT:-3001}:3001"
+    # common_net : partage avec le nginx-proxy-manager -> joignable par son nom.
+    # ATTENTION : common_net est INTERNE (pas d'Internet) -> le backend ne joint
+    # PAS Neon (P1001). Choix assume pour rendre le SITE public ; backend KO tant
+    # que le serveur n'est pas repare (pour Neon il faudrait aussi sahel-network,
+    # mais la 2e attache echoue avec la base corrompue).
+    networks: [common_net]
     environment:
       NODE_ENV: production
       PORT: "3001"
@@ -60,11 +59,8 @@ services:
         NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
     container_name: sahel_academy_web
     restart: always
-    # Mode bridge par defaut (voir backend). Site publie sur le port 8480 de
-    # l'hote (3000 deja pris sur ce serveur mutualise).
-    network_mode: bridge
-    ports:
-      - "${WEB_PORT:-8480}:3000"
+    # common_net : le proxy joint le site par son nom sahel_academy_web:3000.
+    networks: [common_net]
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -95,6 +91,8 @@ services:
   #     - "${PWA_PORT:-8080}:80"
   #   networks: [sahel]
 
-# (Aucun réseau nommé : les 2 services sont en network_mode: bridge, seul mode
-#  qui se déploie de façon fiable tant que la base réseau du serveur (local-kv.db)
-#  n'est pas réparée. Config à faire évoluer une fois le serveur remis en état.)
+networks:
+  # Réseau partagé avec le nginx-proxy-manager (external). INTERNE (pas d'Internet).
+  # Rend le site public via le proxy, mais le backend ne joint pas Neon.
+  common_net:
+    external: true
