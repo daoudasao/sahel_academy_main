@@ -13,8 +13,8 @@ services:
       dockerfile: Dockerfile
     container_name: sahel_academy_backend
     restart: always
-    ports:
-      - "${BACKEND_PORT:-3001}:3001"
+    # Pas de port publié : le nginx-proxy-manager joint ce conteneur par son
+    # nom (sahel_academy_backend:3001) sur le réseau partagé common_net.
     environment:
       NODE_ENV: production
       PORT: "3001"
@@ -43,9 +43,7 @@ services:
       BUNNY_CDN_DOMAIN: ${BUNNY_CDN_DOMAIN:-}
       SWAGGER_USER: ${SWAGGER_USER:-}
       SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}
-    # Réseau par défaut 'bridge' (déjà existant) : évite de créer un nouveau
-    # réseau, car la base réseau du serveur est corrompue (negative offset).
-    network_mode: bridge
+    networks: [common_net]
 
   # ── 2. Site Next.js (dashboard admin + pages publiques) ──
   # NB : les NEXT_PUBLIC_* sont figées au BUILD (URL publiques du serveur).
@@ -58,15 +56,15 @@ services:
         NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
     container_name: sahel_academy_web
     restart: always
-    ports:
-      - "${WEB_PORT:-3000}:3000"
+    # Pas de port publié : le nginx-proxy-manager joint ce conteneur par son
+    # nom (sahel_academy_web:3000) sur le réseau partagé common_net.
     environment:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
       DATABASE_URL: ${DATABASE_URL:-}
     depends_on: [backend]
-    network_mode: bridge
+    networks: [common_net]
 
   # ── 3. PWA Flutter (web) servie par nginx ── DÉSACTIVÉ POUR L'INSTANT ──
   # Le build Flutter pose problème sur ce serveur (archi/registre). On déploie
@@ -91,6 +89,10 @@ services:
   #     - "${PWA_PORT:-8080}:80"
   #   networks: [sahel]
 
-# (Bloc réseau retiré volontairement : on réutilise le réseau 'bridge' par
-#  défaut via network_mode, pour ne créer aucun réseau sur ce serveur dont la
-#  base réseau Docker est corrompue. À restaurer une fois le serveur réparé.)
+networks:
+  # Réseau partagé déjà présent sur le serveur, sur lequel est aussi branché le
+  # nginx-proxy-manager. 'external: true' = le stack NE le crée PAS, il le
+  # réutilise (donc pas d'erreur de création de réseau). Le proxy peut ainsi
+  # joindre backend et web par leur nom de conteneur.
+  common_net:
+    external: true
