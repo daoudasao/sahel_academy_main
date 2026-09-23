@@ -66,25 +66,28 @@ services:
     depends_on: [backend]
     networks: [sahel]
 
-  # ── 3. PWA Flutter (web) servie par nginx ──
-  # NB : API_URL est figée au BUILD (--dart-define).
-  pwa:
-    build:
-      context: ./pwa
-      dockerfile: Dockerfile
-      args:
-        # Tag figé : 'stable' fournit un Dart compatible. NE PAS remettre un
-        # numéro de version (ex. 3.44.4) : il n'existe pas sur le registre
-        # public ghcr.io/cirruslabs/flutter et provoque l'erreur "denied".
-        FLUTTER_VERSION: "stable"
-        API_URL: ${API_URL:-http://localhost:3001/api/v1}
-        WEB_PUSH_VAPID_KEY: ${WEB_PUSH_VAPID_KEY:-}
-        GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
-    container_name: sahel_academy_pwa
-    restart: always
-    ports:
-      - "${PWA_PORT:-8080}:80"
-    networks: [sahel]
+  # ── 3. PWA Flutter (web) servie par nginx ── DÉSACTIVÉ POUR L'INSTANT ──
+  # Le build Flutter pose problème sur ce serveur (archi/registre). On déploie
+  # d'abord backend + web ; la PWA reste servie par Firebase.
+  # Pour la réactiver : décommenter ce bloc et redéployer le stack.
+  #
+  # pwa:
+  #   build:
+  #     context: ./pwa
+  #     dockerfile: Dockerfile
+  #     args:
+  #       # Tag figé : 'stable' fournit un Dart compatible. NE PAS remettre un
+  #       # numéro de version (ex. 3.44.4) : il n'existe pas sur le registre
+  #       # public ghcr.io/cirruslabs/flutter et provoque l'erreur "denied".
+  #       FLUTTER_VERSION: "stable"
+  #       API_URL: ${API_URL:-http://localhost:3001/api/v1}
+  #       WEB_PUSH_VAPID_KEY: ${WEB_PUSH_VAPID_KEY:-}
+  #       GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
+  #   container_name: sahel_academy_pwa
+  #   restart: always
+  #   ports:
+  #     - "${PWA_PORT:-8080}:80"
+  #   networks: [sahel]
 
 networks:
   sahel:
