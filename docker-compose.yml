@@ -13,8 +13,12 @@ services:
       dockerfile: Dockerfile
     container_name: sahel_academy_backend
     restart: always
-    # Pas de port publié : le nginx-proxy-manager joint ce conteneur par son
-    # nom (sahel_academy_backend:3001) sur le réseau partagé common_net.
+    # Mode bridge : conteneur IPv4-only → joint Neon en IPv4 (l'IPv6 de l'hote
+    # est cassee, donc le mode host echoue sur Neon). Port publie sur l'hote pour
+    # que le nginx-proxy-manager le joigne via <passerelle-hote>:3001.
+    network_mode: bridge
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
     environment:
       NODE_ENV: production
       PORT: "3001"
@@ -60,15 +64,17 @@ services:
         NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
     container_name: sahel_academy_web
     restart: always
-    # CONTOURNEMENT : mode host (voir backend). Le site écoute sur le port 8480
-    # de l'hôte (3000 est déjà pris sur ce serveur mutualisé).
+    # Mode bridge (voir backend). Le site ecoute sur 3000 dans le conteneur,
+    # publie sur le port 8480 de l'hote (3000 est deja pris sur ce serveur).
+    network_mode: bridge
+    ports:
+      - "${WEB_PORT:-8480}:3000"
     environment:
       NODE_ENV: production
-      PORT: "8480"
+      PORT: "3000"
       HOSTNAME: "0.0.0.0"
       DATABASE_URL: ${DATABASE_URL:-}
     depends_on: [backend]
-    network_mode: host
 
   # ── 3. PWA Flutter (web) servie par nginx ── DÉSACTIVÉ POUR L'INSTANT ──
   # Le build Flutter pose problème sur ce serveur (archi/registre). On déploie
