@@ -43,9 +43,10 @@ services:
       BUNNY_CDN_DOMAIN: ${BUNNY_CDN_DOMAIN:-}
       SWAGGER_USER: ${SWAGGER_USER:-}
       SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}
-    # 2 réseaux : 'sahel-network' (créé à la main, a Internet → accès Neon) +
-    # 'common_net' (partagé avec le proxy → joignable par son nom).
-    networks: [sahel-network, common_net]
+    # Un seul réseau : 'sahel-network' (a Internet → Neon). Le nginx-proxy-manager
+    # y sera connecté aussi, pour joindre ce conteneur par son nom. Un seul lien
+    # réseau = moins d'écritures (la base réseau du serveur est fragile).
+    networks: [sahel-network]
 
   # ── 2. Site Next.js (dashboard admin + pages publiques) ──
   # NB : les NEXT_PUBLIC_* sont figées au BUILD (URL publiques du serveur).
@@ -66,7 +67,7 @@ services:
       HOSTNAME: "0.0.0.0"
       DATABASE_URL: ${DATABASE_URL:-}
     depends_on: [backend]
-    networks: [sahel-network, common_net]
+    networks: [sahel-network]
 
   # ── 3. PWA Flutter (web) servie par nginx ── DÉSACTIVÉ POUR L'INSTANT ──
   # Le build Flutter pose problème sur ce serveur (archi/registre). On déploie
@@ -92,12 +93,8 @@ services:
   #   networks: [sahel]
 
 networks:
-  # Réseau créé à la main (Portainer) : sortie Internet pour joindre Neon.
+  # Réseau créé à la main (Portainer), avec Internet (→ Neon). Le proxy y sera
+  # connecté aussi (Portainer → conteneur NPM → Join network → sahel-network),
+  # pour joindre backend et web par leur nom. 'external' = le stack ne le crée pas.
   sahel-network:
-    external: true
-  # Réseau partagé déjà présent sur le serveur, sur lequel est aussi branché le
-  # nginx-proxy-manager. 'external: true' = le stack NE le crée PAS, il le
-  # réutilise (donc pas d'erreur de création de réseau). Le proxy peut ainsi
-  # joindre backend et web par leur nom de conteneur.
-  common_net:
     external: true
