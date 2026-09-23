@@ -13,12 +13,9 @@ services:
       dockerfile: Dockerfile
     container_name: sahel_academy_backend
     restart: always
-    # Mode bridge : conteneur IPv4-only → joint Neon en IPv4 (l'IPv6 de l'hote
-    # est cassee, donc le mode host echoue sur Neon). Port publie sur l'hote pour
-    # que le nginx-proxy-manager le joigne via <passerelle-hote>:3001.
-    network_mode: bridge
-    ports:
-      - "${BACKEND_PORT:-3001}:3001"
+    # Reseau du nginx-proxy-manager (a une passerelle Internet -> Neon en IPv4,
+    # et le proxy joint ce conteneur par son nom : sahel_academy_backend:3001).
+    networks: [bridge_public_npm]
     environment:
       NODE_ENV: production
       PORT: "3001"
@@ -59,11 +56,9 @@ services:
         NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
     container_name: sahel_academy_web
     restart: always
-    # Mode bridge (voir backend). Le site ecoute sur 3000 dans le conteneur,
-    # publie sur le port 8480 de l'hote (3000 est deja pris sur ce serveur).
-    network_mode: bridge
-    ports:
-      - "${WEB_PORT:-8480}:3000"
+    # Reseau du nginx-proxy-manager (proxy le joint par son nom
+    # sahel_academy_web:3000, et ce reseau a Internet).
+    networks: [bridge_public_npm]
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -94,6 +89,9 @@ services:
   #     - "${PWA_PORT:-8080}:80"
   #   networks: [sahel]
 
-# (Aucun réseau déclaré : les 2 services sont en network_mode: host pour
-#  contourner la corruption réseau du serveur. Setup à restaurer une fois
-#  local-kv.db réparé côté hôte.)
+networks:
+  # Réseau du nginx-proxy-manager, déjà présent (external). Il a une passerelle
+  # Internet (→ Neon en IPv4) ET le proxy y est → il joint nos conteneurs par
+  # leur nom. Un seul réseau = une seule écriture d'endpoint.
+  bridge_public_npm:
+    external: true
