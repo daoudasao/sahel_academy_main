@@ -1,4 +1,13 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://sahel-academy-backend.onrender.com/api/v1";
+// Côté SERVEUR (rendu dans le conteneur web) : on joint le backend EN INTERNE
+// par son nom de conteneur via INTERNAL_API_URL (pas besoin d'Internet ni du
+// DNS public — indispensable car le web n'a pas d'egress Internet).
+// Côté NAVIGATEUR : on utilise l'URL publique NEXT_PUBLIC_API_URL.
+const API_URL =
+  typeof window === "undefined"
+    ? process.env.INTERNAL_API_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://localhost:3001/api/v1"
+    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
 export interface Bourse {
   id: string;

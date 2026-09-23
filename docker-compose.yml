@@ -66,6 +66,9 @@ services:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
       DATABASE_URL: ${DATABASE_URL:-}
+      # URL INTERNE du backend (nom de conteneur, via common_net) pour le rendu
+      # serveur (SSR). Évite de dépendre d'Internet / du DNS public côté serveur.
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://sahel_academy_backend:3001/api/v1}
     depends_on: [backend]
 
   # ── 3. PWA Flutter (web) servie par nginx ── DÉSACTIVÉ POUR L'INSTANT ──
