@@ -13,9 +13,10 @@ services:
       dockerfile: Dockerfile
     container_name: sahel_academy_backend
     restart: always
-    # 2 reseaux : common_net (partage avec le proxy -> joint par son nom) +
-    # sahel-network (a une passerelle Internet -> Neon en IPv4).
-    networks: [common_net, sahel-network]
+    # UN SEUL reseau (2 attaches d'un coup echouent avec la base corrompue).
+    # bridge_public_npm a le NPM dessus (-> joint par nom) ET une passerelle
+    # Internet (-> Neon en IPv4). Le meilleur des deux en une seule attache.
+    networks: [bridge_public_npm]
     environment:
       NODE_ENV: production
       PORT: "3001"
@@ -56,8 +57,8 @@ services:
         NEXT_PUBLIC_VERIF_URL: ${NEXT_PUBLIC_VERIF_URL:-http://localhost:3000}
     container_name: sahel_academy_web
     restart: always
-    # 2 reseaux : common_net (proxy par nom) + sahel-network (Internet).
-    networks: [common_net, sahel-network]
+    # UN SEUL reseau : bridge_public_npm (proxy par nom + Internet).
+    networks: [bridge_public_npm]
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -89,10 +90,8 @@ services:
   #   networks: [sahel]
 
 networks:
-  # Partagé avec le nginx-proxy-manager (le proxy joint nos conteneurs par leur
-  # nom via ce réseau). INTERNE : pas d'Internet, sert uniquement au proxy.
-  common_net:
-    external: true
-  # Réseau créé à la main, AVEC passerelle Internet (→ Neon en IPv4).
-  sahel-network:
+  # Réseau du nginx-proxy-manager (external) : le NPM y est (→ nos conteneurs
+  # joignables par leur nom) ET il a une passerelle Internet (→ Neon en IPv4).
+  # Un seul réseau = une seule écriture (la base réseau du serveur est corrompue).
+  bridge_public_npm:
     external: true
