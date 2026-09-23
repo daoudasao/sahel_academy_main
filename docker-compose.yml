@@ -73,7 +73,10 @@ services:
       context: ./pwa
       dockerfile: Dockerfile
       args:
-        FLUTTER_VERSION: ${FLUTTER_VERSION:-stable}
+        # Tag figé : 'stable' fournit un Dart compatible. NE PAS remettre un
+        # numéro de version (ex. 3.44.4) : il n'existe pas sur le registre
+        # public ghcr.io/cirruslabs/flutter et provoque l'erreur "denied".
+        FLUTTER_VERSION: "stable"
         API_URL: ${API_URL:-http://localhost:3001/api/v1}
         WEB_PUSH_VAPID_KEY: ${WEB_PUSH_VAPID_KEY:-}
         GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
