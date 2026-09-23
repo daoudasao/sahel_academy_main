@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import AppBreadcrumb from "@/app/components/AppBreadcrumb";
 import InfoBanner from "@/app/components/InfoBanner";
 import { supportApi, uploadApi, BASE } from "@/app/lib/api";
 import { io, Socket } from "socket.io-client";
@@ -574,7 +573,8 @@ export default function SupportPage() {
 
   return (
     <div className="w-full max-w-full space-y-4">
-      <AppBreadcrumb />
+      {/* Le breadcrumb + le bouton Mode Sombre sont déjà fournis par
+          DashboardShell (layout) — ne pas les remettre ici (doublon). */}
 
       {/* Header vert compact */}
       <div className="w-full bg-gradient-to-r from-[#0a2d26] via-[#0d3b32] to-[#124b40] rounded-xl sm:rounded-2xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden">
