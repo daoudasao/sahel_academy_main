@@ -4,6 +4,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { bearer, admin, oneTimeToken } from 'better-auth/plugins';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { journaliserConnexion } from '../audit/journal-connexion';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -171,6 +172,16 @@ export const auth = betterAuth({
     account: {
       create: { after: reprendrePhotoGoogle },
       update: { after: reprendrePhotoGoogle },
+    },
+    // ─── Journal d'audit ───
+    // Une session créée = une connexion (e-mail, Google, échange de jeton
+    // PWA…). Seules celles de l'équipe sont tracées.
+    session: {
+      create: {
+        after: async (session) => {
+          await journaliserConnexion(prisma, session);
+        },
+      },
     },
   },
   // ─── Cookies cross-domaine ───

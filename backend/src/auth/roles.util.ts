@@ -6,6 +6,7 @@ import { Role } from '@prisma/client';
  * FORMATEUR, lui, ne voit que ce qui le concerne.
  */
 export const ROLES_EQUIPE: readonly Role[] = [
+  Role.SUPER_ADMIN,
   Role.ADMIN,
   Role.STAFF,
   Role.SUPPORT,
@@ -16,8 +17,17 @@ export const ROLES_EQUIPE: readonly Role[] = [
 
 type AvecRole = { role?: string | null } | null | undefined;
 
-/** Vrai si l'utilisateur a l'un des [roles] donnés. */
+/** Vrai si l'utilisateur est SUPER_ADMIN (niveau le plus élevé). */
+export function estSuperAdmin(user: AvecRole): boolean {
+  return user?.role === Role.SUPER_ADMIN;
+}
+
+/**
+ * Vrai si l'utilisateur a l'un des [roles] donnés.
+ * Un SUPER_ADMIN a tous les droits : il passe toujours.
+ */
 export function aUnRole(user: AvecRole, roles: readonly Role[]): boolean {
+  if (estSuperAdmin(user)) return true;
   return !!user?.role && (roles as readonly string[]).includes(user.role);
 }
 

@@ -20,6 +20,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 import type { User } from '@prisma/client';
+import { SkipAudit } from '../audit/skip-audit.decorator';
 
 @ApiTags('actualites')
 @Controller('actualites')
@@ -63,6 +64,7 @@ export class ActualitesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard)
+  @SkipAudit()
   @Post(':id/like')
   like(@Param('id') id: string) {
     return this.actualitesService.like(id);
@@ -70,6 +72,7 @@ export class ActualitesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard)
+  @SkipAudit()
   @Post(':id/unlike')
   unlike(@Param('id') id: string) {
     return this.actualitesService.unlike(id);

@@ -17,6 +17,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 import type { User } from '@prisma/client';
+import { SkipAudit } from '../audit/skip-audit.decorator';
 
 @ApiTags('support')
 @ApiBearerAuth('access-token')
@@ -32,6 +33,8 @@ export class SupportController {
     return this.supportService.getMyMessages(user.id);
   }
 
+  // Messagerie : déjà historisée dans support_messages (auteur, date).
+  @SkipAudit()
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @Post('messages')
   sendMessage(
@@ -61,6 +64,7 @@ export class SupportController {
   }
 
   @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT)
+  @SkipAudit()
   @Post('conversations/:userId/messages')
   replyToUser(
     @Param('userId') userId: string,

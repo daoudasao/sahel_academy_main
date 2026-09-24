@@ -8,6 +8,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 import type { User } from '@prisma/client';
+import { SkipAudit } from '../audit/skip-audit.decorator';
 
 @ApiTags('notifications')
 @ApiBearerAuth('access-token')
@@ -32,6 +33,7 @@ export class NotificationsController {
     return this.notificationsService.findUrgentesForUser(user.id);
   }
 
+  @SkipAudit()
   @Post('urgentes/read')
   marquerAlertesVues(
     @CurrentUser() user: User,
@@ -53,12 +55,14 @@ export class NotificationsController {
     return this.notificationsService.removeDefinitivement(id);
   }
 
+  @SkipAudit()
   @Patch(':id/read')
   markAsRead(@Param('id') id: string, @CurrentUser() user: User) {
     return this.notificationsService.markAsRead(id, user.id);
   }
 
   /** Côté utilisateur : retire la notification de SA liste uniquement. */
+  @SkipAudit()
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: User) {
     return this.notificationsService.remove(id, user.id);

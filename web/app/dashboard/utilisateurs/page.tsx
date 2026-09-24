@@ -29,6 +29,8 @@ export default function UtilisateursPage() {
   const getRoleBadge = (role?: string) => {
     const r = (role || "ETUDIANT").toUpperCase();
     switch (r) {
+      case "SUPER_ADMIN":
+        return <span className="badge badge-danger font-semibold">Super Admin</span>;
       case "ADMIN":
         return <span className="badge badge-purple font-semibold">Administrateur</span>;
       case "FORMATEUR":
@@ -105,6 +107,7 @@ export default function UtilisateursPage() {
               <option value="FORMATEUR">Formateurs</option>
               <option value="STAFF">Staff</option>
               <option value="ADMIN">Administrateurs</option>
+              <option value="SUPER_ADMIN">Super Admins</option>
             </select>
             <select
               className="form-select"

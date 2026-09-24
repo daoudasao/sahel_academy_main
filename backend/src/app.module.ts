@@ -21,6 +21,7 @@ import { ClassesModule } from './classes/classes.module';
 import { SupportModule } from './support/support.module';
 import { EspaceFormateurModule } from './espace-formateur/espace-formateur.module';
 import { FirebaseModule } from './firebase/firebase.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { FirebaseModule } from './firebase/firebase.module';
       },
     ]),
     PrismaModule,
+    AuditModule,
     AuthModule,
     UsersModule,
     DepartementsModule,

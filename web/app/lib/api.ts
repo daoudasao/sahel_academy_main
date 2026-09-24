@@ -197,4 +197,70 @@ export const rolesApi = {
   assignUserRole: (userId: string, role: string) => api.patch<any>(`/users/${userId}`, { role }),
 };
 
+// ─── Journal d'audit (SUPER_ADMIN uniquement) ───
+
+export type ActionAudit =
+  | "CREATION"
+  | "MODIFICATION"
+  | "SUPPRESSION"
+  | "CONNEXION"
+  | "ATTRIBUTION_ROLE";
+
+export interface AuditLog {
+  id: string;
+  userId: string | null;
+  userNom: string | null;
+  userEmail: string | null;
+  userRole: string | null;
+  action: ActionAudit;
+  ressource: string;
+  ressourceId: string | null;
+  libelle: string | null;
+  methode: string;
+  route: string;
+  statut: number;
+  succes: boolean;
+  details: Record<string, unknown> | null;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditFiltres {
+  page?: number;
+  limite?: number;
+  userId?: string;
+  action?: ActionAudit;
+  ressource?: string;
+  succes?: "true" | "false";
+  du?: string;
+  au?: string;
+  recherche?: string;
+}
+
+export const auditApi = {
+  list: (filtres: AuditFiltres) => {
+    const params = new URLSearchParams();
+    for (const [cle, valeur] of Object.entries(filtres)) {
+      if (valeur !== undefined && valeur !== "") params.set(cle, String(valeur));
+    }
+    return api.get<{
+      items: AuditLog[];
+      total: number;
+      page: number;
+      limite: number;
+      pages: number;
+    }>(`/audit-logs?${params.toString()}`);
+  },
+  filtres: () =>
+    api.get<{
+      ressources: string[];
+      utilisateurs: { id: string; nom: string | null; email: string | null; role: string | null }[];
+    }>("/audit-logs/filtres"),
+  resume: () =>
+    api.get<{ actions: number; suppressions: number; echecs: number; connexions: number }>(
+      "/audit-logs/resume"
+    ),
+};
+
 

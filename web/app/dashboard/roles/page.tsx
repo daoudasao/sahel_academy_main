@@ -17,7 +17,8 @@ import {
   CheckCircle2, 
   Search,
   AlertCircle,
-  UserCheck
+  UserCheck,
+  Crown
 } from "lucide-react";
 
 // Structure simplifiée d'un rôle
@@ -32,9 +33,17 @@ export interface SystemRole {
 
 const ROLES_LIST: SystemRole[] = [
   {
-    code: "ADMIN",
+    code: "SUPER_ADMIN",
     label: "Super Admin",
-    description: "Accès complet et administration générale du système.",
+    description: "Supervise l'équipe : seul à consulter le journal d'audit et à gérer les administrateurs.",
+    badgeClass: "badge-danger",
+    icon: "Crown",
+    permissions: ["Journal d'audit", "Gestion des Administrateurs", "Accès Total Système"],
+  },
+  {
+    code: "ADMIN",
+    label: "Administrateur",
+    description: "Administration générale du système (hors supervision).",
     badgeClass: "badge-purple",
     icon: "ShieldCheck",
     permissions: ["Accès Total Système", "Attribution des Rôles", "Paramètres Globaux"],
@@ -74,10 +83,14 @@ const ROLES_LIST: SystemRole[] = [
 ];
 
 import { useSession } from "@/app/lib/auth-client";
+import { isSuperAdminRole } from "@/app/lib/permissions";
 
 export default function SimplifiedRolesPage() {
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
+  // Seul un SUPER_ADMIN peut attribuer ce rôle ou modifier un compte SUPER_ADMIN
+  // (le backend le vérifie aussi).
+  const estSuperAdmin = isSuperAdminRole((session?.user as { role?: string } | undefined)?.role);
 
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,8 +166,10 @@ export default function SimplifiedRolesPage() {
   const getRoleBadge = (roleCode?: string) => {
     const code = (roleCode || "ETUDIANT").toUpperCase();
     switch (code) {
+      case "SUPER_ADMIN":
+        return <span className="badge badge-danger font-semibold">Super Admin</span>;
       case "ADMIN":
-        return <span className="badge badge-purple font-semibold">Super Admin</span>;
+        return <span className="badge badge-purple font-semibold">Administrateur</span>;
       case "COMPTABLE":
         return <span className="badge badge-success font-semibold">Comptable</span>;
       case "SUPPORT":
@@ -175,6 +190,7 @@ export default function SimplifiedRolesPage() {
 
   const renderIcon = (name: string) => {
     switch (name) {
+      case "Crown": return <Crown className="w-5 h-5 text-rose-400" />;
       case "ShieldCheck": return <ShieldCheck className="w-5 h-5 text-purple-400" />;
       case "CreditCard": return <CreditCard className="w-5 h-5 text-emerald-400" />;
       case "Headphones": return <Headphones className="w-5 h-5 text-sky-400" />;
@@ -316,6 +332,9 @@ export default function SimplifiedRolesPage() {
                   filteredUsers.map((u) => {
                     const currentRole = (u.role || "ETUDIANT").toUpperCase();
                     const isSelf = !!currentUserId && u.id === currentUserId;
+                    // Un compte SUPER_ADMIN n'est modifiable que par un SUPER_ADMIN.
+                    const protege = currentRole === "SUPER_ADMIN" && !estSuperAdmin;
+                    const verrouille = isSelf || protege;
 
                     return (
                       <tr key={u.id} className="hover:bg-[var(--bg-input)]/50 transition-colors">
@@ -352,14 +371,24 @@ export default function SimplifiedRolesPage() {
                         <td className="p-3 text-right">
                           <select
                             value={currentRole}
-                            disabled={assigningUserId === u.id || isSelf}
-                            title={isSelf ? "Vous ne pouvez pas modifier votre propre rôle" : undefined}
+                            disabled={assigningUserId === u.id || verrouille}
+                            title={
+                              isSelf
+                                ? "Vous ne pouvez pas modifier votre propre rôle"
+                                : protege
+                                  ? "Seul un Super Admin peut modifier ce compte"
+                                  : undefined
+                            }
                             onChange={(e) => handleAssignRole(u.id, e.target.value)}
                             className={`py-1.5 px-3 text-xs rounded-xl border border-[var(--border-color)] text-[var(--text-primary)] font-semibold focus:outline-none focus:border-emerald-500 shadow-xs transition-colors ${
-                              isSelf ? "bg-[var(--bg-input)] opacity-60 cursor-not-allowed" : "bg-[var(--bg-card)] cursor-pointer hover:border-emerald-400"
+                              verrouille ? "bg-[var(--bg-input)] opacity-60 cursor-not-allowed" : "bg-[var(--bg-card)] cursor-pointer hover:border-emerald-400"
                             }`}
                           >
-                            <option value="ADMIN">Super Admin</option>
+                            {/* Proposé au seul SUPER_ADMIN ; affiché (verrouillé) si le compte l'est déjà */}
+                            {(estSuperAdmin || currentRole === "SUPER_ADMIN") && (
+                              <option value="SUPER_ADMIN">Super Admin</option>
+                            )}
+                            <option value="ADMIN">Administrateur</option>
                             <option value="COMPTABLE">Comptable</option>
                             <option value="SUPPORT">Support & Admissions</option>
                             <option value="RESPONSABLE_PEDAGOGIQUE">Resp. Pédagogique</option>

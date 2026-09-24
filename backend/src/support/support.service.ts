@@ -5,6 +5,7 @@ import type { User } from '@prisma/client';
 import { SupportGateway } from './support.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateSupportMessageDto } from './dto/create-support-message.dto';
+import { aUnRole } from '../auth/roles.util';
 
 @Injectable()
 export class SupportService {
@@ -55,10 +56,12 @@ export class SupportService {
       throw new NotFoundException('Message introuvable.');
     }
 
-    const isStaffOrAdmin =
-      currentUser.role === Role.ADMIN ||
-      currentUser.role === Role.STAFF ||
-      currentUser.role === Role.SUPPORT;
+    // aUnRole : un SUPER_ADMIN passe toujours.
+    const isStaffOrAdmin = aUnRole(currentUser, [
+      Role.ADMIN,
+      Role.STAFF,
+      Role.SUPPORT,
+    ]);
 
     if (!isStaffOrAdmin) {
       // Un utilisateur ne peut supprimer que ses propres messages

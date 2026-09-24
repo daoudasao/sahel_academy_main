@@ -12,7 +12,8 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { estEquipe } from '../auth/roles.util';
+import { aUnRole, estEquipe, estSuperAdmin } from '../auth/roles.util';
+import { SkipAudit } from '../audit/skip-audit.decorator';
 import type { User } from '@prisma/client';
 
 @ApiTags('users')
@@ -31,9 +32,25 @@ export class UsersController {
     }
   }
 
+  /**
+   * Un compte SUPER_ADMIN ne peut être modifié, supprimé ou voir son mot de
+   * passe réinitialisé que par un autre SUPER_ADMIN (sinon un ADMIN pourrait
+   * neutraliser celui qui le contrôle).
+   */
+  private async protegerSuperAdmin(currentUser: User, cibleId: string) {
+    if (estSuperAdmin(currentUser)) return;
+    const cible = await this.usersService.findOne(cibleId);
+    if (estSuperAdmin(cible)) {
+      throw new ForbiddenException('Seul un super administrateur peut agir sur ce compte.');
+    }
+  }
+
   @Roles(Role.ADMIN)
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
+  create(@CurrentUser() currentUser: User, @Body() createUserDto: CreateUserDto) {
+    if (createUserDto.role === Role.SUPER_ADMIN && !estSuperAdmin(currentUser)) {
+      throw new ForbiddenException('Seul un super administrateur peut attribuer ce rôle.');
+    }
     return this.usersService.create(createUserDto);
   }
 
@@ -57,6 +74,7 @@ export class UsersController {
     return this.usersService.update(user.id, updateProfilDto);
   }
 
+  @SkipAudit()
   @Patch('fcm-token')
   updateFcmToken(
     @CurrentUser() user: User,
@@ -79,7 +97,8 @@ export class UsersController {
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    const estAdmin = currentUser.role === Role.ADMIN;
+    // aUnRole : un SUPER_ADMIN est aussi administrateur.
+    const estAdmin = aUnRole(currentUser, [Role.ADMIN]);
 
     if (updateUserDto.role !== undefined) {
       if (id === currentUser.id) {
@@ -89,13 +108,21 @@ export class UsersController {
       if (!estAdmin) {
         throw new ForbiddenException('Seul un administrateur peut modifier un rôle.');
       }
+      // Et SUPER_ADMIN ne peut être attribué que par un SUPER_ADMIN.
+      if (updateUserDto.role === Role.SUPER_ADMIN && !estSuperAdmin(currentUser)) {
+        throw new ForbiddenException('Seul un super administrateur peut attribuer ce rôle.');
+      }
     }
 
-    // Un non-admin ne peut pas modifier un compte administrateur
-    // (e-mail, activation…), sinon il pourrait en prendre le contrôle.
-    if (!estAdmin) {
+    if (!estSuperAdmin(currentUser)) {
       const cible = await this.usersService.findOne(id);
-      if (cible.role === Role.ADMIN) {
+      // Un compte SUPER_ADMIN n'est modifiable que par un SUPER_ADMIN.
+      if (estSuperAdmin(cible)) {
+        throw new ForbiddenException('Seul un super administrateur peut modifier ce compte.');
+      }
+      // Un non-admin ne peut pas modifier un compte administrateur
+      // (e-mail, activation…), sinon il pourrait en prendre le contrôle.
+      if (!estAdmin && cible.role === Role.ADMIN) {
         throw new ForbiddenException('Seul un administrateur peut modifier ce compte.');
       }
     }
@@ -106,13 +133,19 @@ export class UsersController {
   /** Réinitialise le mot de passe d'un utilisateur (administrateur uniquement). */
   @Roles(Role.ADMIN)
   @Patch(':id/password')
-  setPassword(@Param('id') id: string, @Body() dto: SetPasswordDto) {
+  async setPassword(
+    @CurrentUser() currentUser: User,
+    @Param('id') id: string,
+    @Body() dto: SetPasswordDto,
+  ) {
+    await this.protegerSuperAdmin(currentUser, id);
     return this.usersService.setPassword(id, dto.newPassword);
   }
 
   @Roles(Role.ADMIN)
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  async remove(@CurrentUser() currentUser: User, @Param('id') id: string) {
+    await this.protegerSuperAdmin(currentUser, id);
     return this.usersService.remove(id);
   }
 

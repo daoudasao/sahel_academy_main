@@ -25,6 +25,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      # E-mails (séparés par des virgules) promus SUPER_ADMIN au démarrage.
+      SUPER_ADMIN_EMAILS: ${SUPER_ADMIN_EMAILS:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       ADMIN_URL: ${ADMIN_URL:-}
       VERIF_URL: ${VERIF_URL:-}

@@ -25,6 +25,7 @@ const labelMap: Record<string, string> = {
   utilisateurs: "Utilisateurs",
   actualite: "Actualités",
   support: "Support Client",
+  journal: "Journal d'audit",
   nouveau: "Création",
   modifier: "Modification",
 };

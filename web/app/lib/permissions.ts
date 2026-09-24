@@ -88,11 +88,24 @@ export function isStaffOrAdminRole(userRole?: string): boolean {
   ].includes(role);
 }
 
+/** Pages réservées au SUPER_ADMIN (même un ADMIN n'y a pas accès). */
+export const SUPER_ADMIN_ROUTES = ["/dashboard/journal"];
+
+export function isSuperAdminRole(userRole?: string): boolean {
+  return userRole?.toUpperCase() === "SUPER_ADMIN";
+}
+
 export function canAccessRoute(userRole?: string, routePath?: string): boolean {
   if (!userRole || !routePath) return false;
   const role = userRole.toUpperCase();
 
-  // Super Admin / ADMIN a accès absolu
+  // Pages de supervision : SUPER_ADMIN uniquement
+  const reserveSuperAdmin = SUPER_ADMIN_ROUTES.some(
+    (prefix) => routePath === prefix || routePath.startsWith(prefix + "/")
+  );
+  if (reserveSuperAdmin) return role === "SUPER_ADMIN";
+
+  // SUPER_ADMIN / ADMIN : accès à tout le reste
   if (role === "ADMIN" || role === "SUPER_ADMIN") return true;
 
   // Recherche de la correspondance exacte ou du préfixe de route

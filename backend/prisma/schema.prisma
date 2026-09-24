@@ -14,6 +14,9 @@ datasource db {
 // ─────────────────────────────────────────
 
 enum Role {
+  // Au-dessus d'ADMIN : seul à consulter le journal d'audit et à pouvoir
+  // gérer les comptes ADMIN / SUPER_ADMIN. Attribué via SUPER_ADMIN_EMAILS.
+  SUPER_ADMIN
   ADMIN
   STAFF
   ETUDIANT
@@ -604,5 +607,40 @@ model AlerteVue {
   @@unique([userId, alerteId])
   @@index([userId])
   @@map("alertes_vues")
+}
+
+// Journal d'audit : trace des actions de l'équipe (création, modification,
+// suppression, connexion), consultable uniquement par un SUPER_ADMIN.
+// Volontairement SANS relation vers User : l'auteur est figé au moment de
+// l'action (nom, e-mail, rôle) et la trace survit à la suppression du compte.
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  userNom     String?
+  userEmail   String?
+  userRole    String?
+  // CREATION | MODIFICATION | SUPPRESSION | CONNEXION | ATTRIBUTION_ROLE
+  action      String
+  // Ressource touchée (premier segment de la route : bourses, users…)
+  ressource   String
+  ressourceId String?
+  // Libellé lisible de l'élément (titre, nom, e-mail…) quand il est connu
+  libelle     String?
+  methode     String
+  // Route appelée, sans le préfixe /api/v1 (ex. bourses/:id/champs)
+  route       String
+  statut      Int
+  succes      Boolean  @default(true)
+  // Corps de la requête nettoyé (mots de passe, jetons… retirés) + erreur
+  details     Json?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([ressource])
+  @@index([action])
+  @@map("audit_logs")
 }
 

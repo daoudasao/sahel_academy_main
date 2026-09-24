@@ -45,9 +45,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 
   // ── Réinitialisation du mot de passe (administrateurs uniquement) ──
   const { data: session } = useSession();
-  const isAdmin =
-    (session?.user as { role?: string } | undefined)?.role?.toUpperCase() ===
-    "ADMIN";
+  const roleConnecte = (session?.user as { role?: string } | undefined)?.role?.toUpperCase();
+  const isAdmin = roleConnecte === "ADMIN" || roleConnecte === "SUPER_ADMIN";
   const [showPwdModal, setShowPwdModal] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
@@ -352,6 +351,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const getRoleBadge = (role?: string) => {
     const r = (role || "ETUDIANT").toUpperCase();
     switch (r) {
+      case "SUPER_ADMIN":
+        return <span className="badge badge-danger font-semibold">Super Admin</span>;
       case "ADMIN":
         return <span className="badge badge-purple font-semibold">Administrateur</span>;
       case "FORMATEUR":
