@@ -1,13 +1,18 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { Role, TypeNotification } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { CreateCommentaireClasseDto } from './dto/create-commentaire.dto';
 import { CreateDocumentDto } from './dto/create-document.dto';
+import {
+  CIBLE_DISCUSSION,
+  NotificationsService,
+} from '../notifications/notifications.service';
 import {
   aUnRole,
   auteurDeCommentaire,
@@ -30,6 +35,17 @@ export const ROLES_GESTION_CLASSES: Role[] = [
   Role.RESPONSABLE_PEDAGOGIQUE,
 ];
 
+/** Inscriptions qui ne donnent plus accès à la classe. */
+const INSCRIPTIONS_INACTIVES = ['suspendu', 'abandonne'];
+
+/** Extrait d'un texte pour le corps d'une notification. */
+function extrait(texte: string, max = 140): string {
+  const propre = texte.replace(/\s+/g, ' ').trim();
+  return propre.length > max
+    ? `${propre.slice(0, max - 1).trimEnd()}…`
+    : propre;
+}
+
 type Utilisateur = {
   id: string;
   role?: string | null;
@@ -39,7 +55,12 @@ type Utilisateur = {
 
 @Injectable()
 export class ClassesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ClassesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // ─── Contrôle d'accès ───
 
@@ -134,9 +155,10 @@ export class ClassesService {
       auteurRole = 'Élève';
     }
 
-    return this.prisma.classeMessage.create({
+    const message = await this.prisma.classeMessage.create({
       data: {
         formationId,
+        auteurId: user.id,
         auteurNom,
         auteurRole,
         contenu: dto.contenu,
@@ -144,6 +166,10 @@ export class ClassesService {
       },
       include: { commentaires: true },
     });
+
+    // En arrière-plan : la publication n'attend pas l'envoi des push.
+    void this.notifierNouveauMessage(message, user.id);
+    return message;
   }
 
   async removeMessage(id: string, user: Utilisateur) {
@@ -177,14 +203,132 @@ export class ClassesService {
     await this.verifierAcces(await this.formationDuMessage(messageId), user);
 
     const { auteur, role } = auteurDeCommentaire(user, dto.auteur);
-    return this.prisma.commentaireClasse.create({
+    const commentaire = await this.prisma.commentaireClasse.create({
       data: {
         messageId,
+        auteurId: user.id,
         auteur,
         role,
         contenu: dto.contenu.trim(),
       },
     });
+
+    void this.notifierReponse(messageId, commentaire, user.id);
+    return commentaire;
+  }
+
+  // ─── Notifications de discussion ───
+
+  /**
+   * Nouveau message : prévient les membres de la classe (élèves inscrits
+   * actifs et formateur), sauf l'auteur. Ne lève jamais.
+   */
+  private async notifierNouveauMessage(
+    message: {
+      id: string;
+      formationId: string;
+      auteurNom: string;
+      contenu: string;
+      documentNom: string | null;
+    },
+    auteurId: string,
+  ) {
+    try {
+      const formation = await this.prisma.formation.findUnique({
+        where: { id: message.formationId },
+        select: {
+          titre: true,
+          formateur: { select: { userId: true } },
+          inscriptions: {
+            where: { statut: { notIn: INSCRIPTIONS_INACTIVES } },
+            select: { userId: true },
+          },
+        },
+      });
+      if (!formation) return;
+
+      const destinataires = [
+        ...formation.inscriptions.map((i) => i.userId),
+        formation.formateur?.userId,
+      ].filter((id): id is string => !!id && id !== auteurId);
+
+      const texte =
+        extrait(message.contenu) ||
+        (message.documentNom ? `📎 ${message.documentNom}` : 'Nouveau message');
+      await this.notifications.creerPourUtilisateurs(destinataires, {
+        type: TypeNotification.classe,
+        titre: `Nouveau message · ${formation.titre}`,
+        message: `${message.auteurNom} : ${texte}`,
+        cible: CIBLE_DISCUSSION,
+        cibleId: message.formationId,
+        cibleNom: formation.titre,
+        envoyePar: message.auteurNom,
+        route: `/classe/${message.formationId}/message/${message.id}`,
+      });
+    } catch (e) {
+      this.logger.error(
+        `Notification du message ${message.id} non envoyée`,
+        (e as Error)?.stack,
+      );
+    }
+  }
+
+  /**
+   * Réponse à un message : prévient l'auteur du message et ceux qui y ont
+   * déjà répondu, sauf l'auteur de la réponse. Ne lève jamais.
+   */
+  private async notifierReponse(
+    messageId: string,
+    commentaire: { auteur: string; contenu: string },
+    auteurId: string,
+  ) {
+    try {
+      const message = await this.prisma.classeMessage.findUnique({
+        where: { id: messageId },
+        select: {
+          formationId: true,
+          auteurId: true,
+          auteurRole: true,
+          formation: {
+            select: { titre: true, formateur: { select: { userId: true } } },
+          },
+          commentaires: {
+            where: { auteurId: { not: null } },
+            select: { auteurId: true },
+          },
+        },
+      });
+      if (!message) return;
+
+      // Message antérieur à l'enregistrement de l'auteur : s'il vient du
+      // formateur, c'est lui qu'on prévient.
+      const auteurMessage =
+        message.auteurId ??
+        (message.auteurRole === 'Formateur'
+          ? message.formation.formateur?.userId
+          : null);
+
+      const destinataires = [
+        auteurMessage,
+        ...message.commentaires.map((c) => c.auteurId),
+      ].filter((id): id is string => !!id && id !== auteurId);
+
+      await this.notifications.creerPourUtilisateurs(destinataires, {
+        type: TypeNotification.classe,
+        titre: `Nouvelle réponse · ${message.formation.titre}`,
+        message: `${commentaire.auteur} : ${extrait(commentaire.contenu)}`,
+        cible: CIBLE_DISCUSSION,
+        cibleId: message.formationId,
+        cibleNom: message.formation.titre,
+        envoyePar: commentaire.auteur,
+        route: `/classe/${message.formationId}/message/${messageId}`,
+      });
+    } catch (e) {
+      this.logger.error(
+        `Notification de la réponse au message ${messageId} non envoyée`,
+        (e as Error)?.stack,
+      );
+    }
   }
 
   // ─── Documents (cours) ───

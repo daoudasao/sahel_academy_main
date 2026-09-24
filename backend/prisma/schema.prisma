@@ -277,6 +277,9 @@ model DemandeInscription {
 model ClasseMessage {
   id          String   @id @default(cuid())
   formationId String
+  // Compte de l'auteur (null pour les messages antérieurs) : sert à le
+  // prévenir des réponses.
+  auteurId    String?
   auteurNom   String
   auteurRole  String   @default("Formateur")
   contenu     String   @db.Text
@@ -292,6 +295,8 @@ model ClasseMessage {
 model CommentaireClasse {
   id        String   @id @default(cuid())
   messageId String
+  // Compte de l'auteur (null pour les commentaires antérieurs).
+  auteurId  String?
   auteur    String
   role      String   @default("Élève")
   contenu   String   @db.Text

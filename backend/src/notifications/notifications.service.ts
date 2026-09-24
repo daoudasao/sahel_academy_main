@@ -8,6 +8,12 @@ import { FirebaseService } from '../firebase/firebase.service';
 /** Notifications adressées à tous les inscrits d'une formation. */
 const CIBLES_FORMATION = ['formation', 'classe'];
 
+/**
+ * Notifications de discussion de classe (nouveau message, réponse) : une par
+ * membre, hors de l'historique d'envoi du dashboard.
+ */
+export const CIBLE_DISCUSSION = 'discussion';
+
 /** Écran ouvert par défaut quand la notification n'a pas de destination propre. */
 const ROUTE_PAR_DEFAUT = '/notifications';
 
@@ -51,6 +57,24 @@ export class NotificationsService {
     const notif = await this.prisma.notification.create({ data });
     await this.diffuser(notif);
     return notif;
+  }
+
+  /**
+   * Même notification, personnelle, pour chacun des [userIds] (doublons
+   * ignorés). Envoi temps réel + push à chacun.
+   */
+  async creerPourUtilisateurs(
+    userIds: string[],
+    data: Omit<CreateNotificationDto, 'userId'>,
+  ) {
+    const destinataires = [...new Set(userIds.filter(Boolean))];
+    if (destinataires.length === 0) return [];
+    const route = data.route ?? routeDeduite(data);
+    const notifs = await this.prisma.notification.createManyAndReturn({
+      data: destinataires.map((userId) => ({ ...data, route, userId })),
+    });
+    for (const notif of notifs) await this.diffuser(notif);
+    return notifs;
   }
 
   /**
@@ -202,6 +226,9 @@ export class NotificationsService {
 
   async findAllAdmin() {
     return this.prisma.notification.findMany({
+      // Les discussions de classe génèrent une notification par membre : ce
+      // ne sont pas des envois de l'administration.
+      where: { cible: { not: CIBLE_DISCUSSION } },
       orderBy: { createdAt: 'desc' },
       include: {
         user: {

@@ -32,6 +32,23 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
   final _scrollController = ScrollController();
   bool _enEnvoi = false;
 
+  /// Vrai tant que la classe n'a pas été rechargée à l'ouverture.
+  bool _rechargement = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ouvert depuis une notification, le message (ou sa dernière réponse)
+    // n'est pas forcément en mémoire : on recharge la classe.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await context
+          .read<ClasseRepository>()
+          .chargerContenu(widget.formationId, forcer: true);
+      if (mounted) setState(() => _rechargement = false);
+    });
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -131,6 +148,36 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
 
     final messages = classeRepo.messages(widget.formationId);
     final messageIndex = messages.indexWhere((m) => m.id == widget.messageId);
+
+    if (messageIndex == -1 &&
+        (_rechargement ||
+            classeRepo.contenuEnChargement(widget.formationId) ||
+            !classeRepo.contenuCharge(widget.formationId))) {
+      final erreur = _rechargement
+          ? null
+          : classeRepo.contenuErreur(widget.formationId);
+      return Scaffold(
+        appBar: AppBar(title: const Text('Discussion')),
+        body: Center(
+          child: erreur == null
+              ? const CircularProgressIndicator()
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Impossible de charger la discussion.'),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => classeRepo.chargerContenu(
+                        widget.formationId,
+                        forcer: true,
+                      ),
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+        ),
+      );
+    }
 
     if (messageIndex == -1) {
       return Scaffold(
