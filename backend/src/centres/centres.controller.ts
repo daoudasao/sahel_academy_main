@@ -25,7 +25,7 @@ import { Role } from '@prisma/client';
 export class CentresController {
   constructor(private readonly centresService: CentresService) {}
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
   @Post()
   create(@Body() createCentreDto: CreateCentreDto) {
     return this.centresService.create(createCentreDto);
@@ -41,13 +41,13 @@ export class CentresController {
     return this.centresService.findOne(id);
   }
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateCentreDto: UpdateCentreDto) {
     return this.centresService.update(id, updateCentreDto);
   }
 
-  @Roles(Role.ADMIN, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.RESPONSABLE_PEDAGOGIQUE)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.centresService.remove(id);
@@ -55,13 +55,13 @@ export class CentresController {
 
   // ─── Créneaux ───
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
   @Post(':id/creneaux')
   addCreneau(@Param('id') id: string, @Body() dto: CreateCreneauDto) {
     return this.centresService.addCreneau(id, dto);
   }
 
-  @Roles(Role.ADMIN, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.RESPONSABLE_PEDAGOGIQUE)
   @Delete(':id/creneaux/:creneauId')
   removeCreneau(@Param('creneauId') creneauId: string) {
     return this.centresService.removeCreneau(creneauId);

@@ -35,14 +35,14 @@ const ROLES_LIST: SystemRole[] = [
   {
     code: "SUPER_ADMIN",
     label: "Super Admin",
-    description: "Supervise l'équipe : seul à consulter le journal d'audit et à gérer les administrateurs.",
+    description: "Supervise l'équipe : seul à consulter le journal d'audit et à gérer les chefs de centre.",
     badgeClass: "badge-danger",
     icon: "Crown",
-    permissions: ["Journal d'audit", "Gestion des Administrateurs", "Accès Total Système"],
+    permissions: ["Journal d'audit", "Gestion des chefs de centre", "Accès Total Système"],
   },
   {
-    code: "ADMIN",
-    label: "Administrateur",
+    code: "CHEF_CENTRE",
+    label: "Chef de centre",
     description: "Administration générale du système (hors supervision).",
     badgeClass: "badge-purple",
     icon: "ShieldCheck",
@@ -168,8 +168,8 @@ export default function SimplifiedRolesPage() {
     switch (code) {
       case "SUPER_ADMIN":
         return <span className="badge badge-danger font-semibold">Super Admin</span>;
-      case "ADMIN":
-        return <span className="badge badge-purple font-semibold">Administrateur</span>;
+      case "CHEF_CENTRE":
+        return <span className="badge badge-purple font-semibold">Chef de centre</span>;
       case "COMPTABLE":
         return <span className="badge badge-success font-semibold">Comptable</span>;
       case "SUPPORT":
@@ -388,7 +388,7 @@ export default function SimplifiedRolesPage() {
                             {(estSuperAdmin || currentRole === "SUPER_ADMIN") && (
                               <option value="SUPER_ADMIN">Super Admin</option>
                             )}
-                            <option value="ADMIN">Administrateur</option>
+                            <option value="CHEF_CENTRE">Chef de centre</option>
                             <option value="COMPTABLE">Comptable</option>
                             <option value="SUPPORT">Support & Admissions</option>
                             <option value="RESPONSABLE_PEDAGOGIQUE">Resp. Pédagogique</option>

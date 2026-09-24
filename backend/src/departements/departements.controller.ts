@@ -15,7 +15,7 @@ import { Role } from '@prisma/client';
 export class DepartementsController {
   constructor(private readonly departementsService: DepartementsService) {}
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
   @Post()
   create(@Body() createDepartementDto: CreateDepartementDto) {
     return this.departementsService.create(createDepartementDto);
@@ -31,13 +31,13 @@ export class DepartementsController {
     return this.departementsService.findOne(id);
   }
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateDepartementDto: UpdateDepartementDto) {
     return this.departementsService.update(id, updateDepartementDto);
   }
 
-  @Roles(Role.ADMIN, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.RESPONSABLE_PEDAGOGIQUE)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.departementsService.remove(id);

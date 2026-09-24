@@ -34,7 +34,7 @@ export class UsersController {
 
   /**
    * Un compte SUPER_ADMIN ne peut être modifié, supprimé ou voir son mot de
-   * passe réinitialisé que par un autre SUPER_ADMIN (sinon un ADMIN pourrait
+   * passe réinitialisé que par un autre SUPER_ADMIN (sinon un CHEF_CENTRE pourrait
    * neutraliser celui qui le contrôle).
    */
   private async protegerSuperAdmin(currentUser: User, cibleId: string) {
@@ -45,7 +45,7 @@ export class UsersController {
     }
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Post()
   create(@CurrentUser() currentUser: User, @Body() createUserDto: CreateUserDto) {
     if (createUserDto.role === Role.SUPER_ADMIN && !estSuperAdmin(currentUser)) {
@@ -54,7 +54,7 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE, Role.COMPTABLE, Role.COMMUNITY_MANAGER)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE, Role.COMPTABLE, Role.COMMUNITY_MANAGER)
   @ApiQuery({ name: 'role', enum: Role, required: false })
   @Get()
   findAll(@Query('role') role?: Role) {
@@ -90,7 +90,7 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  @Roles(Role.ADMIN, Role.STAFF)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF)
   @Patch(':id')
   async update(
     @CurrentUser() currentUser: User,
@@ -98,13 +98,13 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     // aUnRole : un SUPER_ADMIN est aussi administrateur.
-    const estAdmin = aUnRole(currentUser, [Role.ADMIN]);
+    const estAdmin = aUnRole(currentUser, [Role.CHEF_CENTRE]);
 
     if (updateUserDto.role !== undefined) {
       if (id === currentUser.id) {
         throw new ForbiddenException('Vous ne pouvez pas modifier votre propre rôle.');
       }
-      // Attribuer un rôle (dont ADMIN) est réservé aux administrateurs.
+      // Attribuer un rôle (dont CHEF_CENTRE) est réservé aux chefs de centre.
       if (!estAdmin) {
         throw new ForbiddenException('Seul un administrateur peut modifier un rôle.');
       }
@@ -122,7 +122,7 @@ export class UsersController {
       }
       // Un non-admin ne peut pas modifier un compte administrateur
       // (e-mail, activation…), sinon il pourrait en prendre le contrôle.
-      if (!estAdmin && cible.role === Role.ADMIN) {
+      if (!estAdmin && cible.role === Role.CHEF_CENTRE) {
         throw new ForbiddenException('Seul un administrateur peut modifier ce compte.');
       }
     }
@@ -131,7 +131,7 @@ export class UsersController {
   }
 
   /** Réinitialise le mot de passe d'un utilisateur (administrateur uniquement). */
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Patch(':id/password')
   async setPassword(
     @CurrentUser() currentUser: User,
@@ -142,7 +142,7 @@ export class UsersController {
     return this.usersService.setPassword(id, dto.newPassword);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Delete(':id')
   async remove(@CurrentUser() currentUser: User, @Param('id') id: string) {
     await this.protegerSuperAdmin(currentUser, id);
@@ -155,7 +155,7 @@ export class UsersController {
     return this.usersService.getInscriptions(id);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Post(':id/inscriptions')
   inscrire(@Param('id') id: string, @Body() createInscriptionDto: CreateInscriptionDto) {
     return this.usersService.inscrire(id, createInscriptionDto);
@@ -167,7 +167,7 @@ export class UsersController {
     return this.usersService.getCandidatures(id);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Patch(':id/inscriptions/:formationId')
   updateInscriptionStatus(
     @Param('id') userId: string,
@@ -177,7 +177,7 @@ export class UsersController {
     return this.usersService.updateInscriptionStatus(userId, formationId, statut);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Delete(':id/inscriptions/:formationId')
   removeInscription(
     @Param('id') userId: string,

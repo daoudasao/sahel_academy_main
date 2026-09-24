@@ -58,7 +58,7 @@ export class SupportService {
 
     // aUnRole : un SUPER_ADMIN passe toujours.
     const isStaffOrAdmin = aUnRole(currentUser, [
-      Role.ADMIN,
+      Role.CHEF_CENTRE,
       Role.STAFF,
       Role.SUPPORT,
     ]);

@@ -32,7 +32,7 @@ export class PaiementsController {
   constructor(private readonly paiementsService: PaiementsService) {}
 
   @AuditContexte('echeance')
-  @Roles(Role.ADMIN, Role.COMPTABLE)
+  @Roles(Role.CHEF_CENTRE, Role.COMPTABLE)
   @Post()
   createEcheance(@Body() createEcheanceDto: CreateEcheanceDto) {
     return this.paiementsService.createEcheance(createEcheanceDto);
@@ -68,21 +68,21 @@ export class PaiementsController {
   // nouveau montant pour une modification, montant supprimé pour une
   // suppression.
   @AuditContexte('paiement')
-  @Roles(Role.ADMIN, Role.STAFF, Role.COMPTABLE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.COMPTABLE)
   @Post(':id/historique')
   addPaiement(@Param('id') id: string, @Body() createPaiementDto: CreatePaiementDto) {
     return this.paiementsService.addPaiement(id, createPaiementDto);
   }
 
   @AuditContexte('paiement')
-  @Roles(Role.ADMIN, Role.COMPTABLE)
+  @Roles(Role.CHEF_CENTRE, Role.COMPTABLE)
   @Delete(':id/historique/:hId')
   removePaiement(@Param('id') id: string, @Param('hId') hId: string) {
     return this.paiementsService.removePaiement(hId);
   }
 
   @AuditContexte('paiement')
-  @Roles(Role.ADMIN, Role.STAFF, Role.COMPTABLE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.COMPTABLE)
   @Patch('historique/:hId')
   updatePaiement(@Param('hId') hId: string, @Body() updatePaiementDto: UpdatePaiementDto) {
     return this.paiementsService.updatePaiement(hId, updatePaiementDto);

@@ -12,7 +12,7 @@ import { aUnRole } from '../auth/roles.util';
 
 /** Rôles qui répondent aux clients (alignés sur la page Support du dashboard). */
 const ROLES_AGENTS: Role[] = [
-  Role.ADMIN,
+  Role.CHEF_CENTRE,
   Role.STAFF,
   Role.SUPPORT,
   Role.COMMUNITY_MANAGER,

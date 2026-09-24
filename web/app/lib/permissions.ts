@@ -2,7 +2,7 @@
 
 export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/dashboard": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "COMPTABLE",
     "SUPPORT",
@@ -11,74 +11,74 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
     "STAFF",
   ],
   "/dashboard/utilisateurs": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "SUPPORT",
     "RESPONSABLE_PEDAGOGIQUE",
     "STAFF",
   ],
-  "/dashboard/roles": ["ADMIN", "SUPER_ADMIN"],
+  "/dashboard/roles": ["CHEF_CENTRE", "SUPER_ADMIN"],
   "/dashboard/formations": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "RESPONSABLE_PEDAGOGIQUE",
     "STAFF",
   ],
   "/dashboard/demandes": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "SUPPORT",
     "RESPONSABLE_PEDAGOGIQUE",
     "STAFF",
   ],
-  "/dashboard/bourses": ["ADMIN", "SUPER_ADMIN", "SUPPORT", "STAFF"],
-  "/dashboard/paiements": ["ADMIN", "SUPER_ADMIN", "COMPTABLE", "STAFF"],
+  "/dashboard/bourses": ["CHEF_CENTRE", "SUPER_ADMIN", "SUPPORT", "STAFF"],
+  "/dashboard/paiements": ["CHEF_CENTRE", "SUPER_ADMIN", "COMPTABLE", "STAFF"],
   "/dashboard/centres": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "RESPONSABLE_PEDAGOGIQUE",
     "STAFF",
   ],
   "/dashboard/departements": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "RESPONSABLE_PEDAGOGIQUE",
     "STAFF",
   ],
   "/dashboard/formateurs": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "RESPONSABLE_PEDAGOGIQUE",
     "COMPTABLE",
     "STAFF",
   ],
   "/dashboard/actualite": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "COMMUNITY_MANAGER",
     "STAFF",
   ],
   "/dashboard/notifications": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "COMMUNITY_MANAGER",
     "STAFF",
   ],
   "/dashboard/support": [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "SUPPORT",
     "COMMUNITY_MANAGER",
     "STAFF",
   ],
-  "/dashboard/parametres": ["ADMIN", "SUPER_ADMIN", "STAFF"],
+  "/dashboard/parametres": ["CHEF_CENTRE", "SUPER_ADMIN", "STAFF"],
 };
 
 export function isStaffOrAdminRole(userRole?: string): boolean {
   if (!userRole) return false;
   const role = userRole.toUpperCase();
   return [
-    "ADMIN",
+    "CHEF_CENTRE",
     "SUPER_ADMIN",
     "COMPTABLE",
     "SUPPORT",
@@ -88,7 +88,7 @@ export function isStaffOrAdminRole(userRole?: string): boolean {
   ].includes(role);
 }
 
-/** Pages réservées au SUPER_ADMIN (même un ADMIN n'y a pas accès). */
+/** Pages réservées au SUPER_ADMIN (même un CHEF_CENTRE n'y a pas accès). */
 export const SUPER_ADMIN_ROUTES = ["/dashboard/journal"];
 
 export function isSuperAdminRole(userRole?: string): boolean {
@@ -105,8 +105,8 @@ export function canAccessRoute(userRole?: string, routePath?: string): boolean {
   );
   if (reserveSuperAdmin) return role === "SUPER_ADMIN";
 
-  // SUPER_ADMIN / ADMIN : accès à tout le reste
-  if (role === "ADMIN" || role === "SUPER_ADMIN") return true;
+  // SUPER_ADMIN / CHEF_CENTRE : accès à tout le reste
+  if (role === "CHEF_CENTRE" || role === "SUPER_ADMIN") return true;
 
   // Recherche de la correspondance exacte ou du préfixe de route
   const sortedKeys = Object.keys(ROUTE_PERMISSIONS).sort((a, b) => b.length - a.length);

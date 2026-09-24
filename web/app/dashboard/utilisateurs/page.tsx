@@ -31,8 +31,8 @@ export default function UtilisateursPage() {
     switch (r) {
       case "SUPER_ADMIN":
         return <span className="badge badge-danger font-semibold">Super Admin</span>;
-      case "ADMIN":
-        return <span className="badge badge-purple font-semibold">Administrateur</span>;
+      case "CHEF_CENTRE":
+        return <span className="badge badge-purple font-semibold">Chef de centre</span>;
       case "FORMATEUR":
         return <span className="badge badge-info font-semibold">Formateur</span>;
       case "STAFF":
@@ -106,7 +106,7 @@ export default function UtilisateursPage() {
               <option value="ETUDIANT">Étudiants</option>
               <option value="FORMATEUR">Formateurs</option>
               <option value="STAFF">Staff</option>
-              <option value="ADMIN">Administrateurs</option>
+              <option value="CHEF_CENTRE">Chefs de centre</option>
               <option value="SUPER_ADMIN">Super Admins</option>
             </select>
             <select

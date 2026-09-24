@@ -28,7 +28,7 @@ import { Role } from '@prisma/client';
 import type { User } from '@prisma/client';
 
 /** Rôles qui traitent les candidatures (alignés sur le dashboard). */
-const ROLES_CANDIDATURES: Role[] = [Role.ADMIN, Role.STAFF, Role.SUPPORT];
+const ROLES_CANDIDATURES: Role[] = [Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT];
 
 @ApiTags('bourses')
 @Controller('bourses')
@@ -109,7 +109,7 @@ export class BoursesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Post()
   create(@Body() createBourseDto: CreateBourseDto) {
     return this.boursesService.create(createBourseDto);
@@ -117,7 +117,7 @@ export class BoursesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateBourseDto: UpdateBourseDto) {
     return this.boursesService.update(id, updateBourseDto);
@@ -125,7 +125,7 @@ export class BoursesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.boursesService.remove(id);
@@ -133,7 +133,7 @@ export class BoursesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Post(':id/champs')
   addChamp(@Param('id') id: string, @Body() dto: CreateChampDto) {
     return this.boursesService.addChamp(id, dto);
@@ -141,7 +141,7 @@ export class BoursesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.CHEF_CENTRE)
   @Delete(':id/champs/:champId')
   removeChamp(@Param('champId') champId: string) {
     return this.boursesService.removeChamp(champId);

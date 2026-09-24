@@ -53,7 +53,9 @@ const RESSOURCES: Record<string, string> = {
 
 const ROLES: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
-  ADMIN: "Administrateur",
+  CHEF_CENTRE: "Chef de centre",
+  // Entrées enregistrées avant le renommage ADMIN -> CHEF_CENTRE.
+  ADMIN: "Chef de centre",
   STAFF: "Staff",
   SUPPORT: "Support",
   COMPTABLE: "Comptable",

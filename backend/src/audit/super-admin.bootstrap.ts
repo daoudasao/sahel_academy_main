@@ -7,7 +7,7 @@ import { AuditService } from './audit.service';
  * Attribue le rôle SUPER_ADMIN aux comptes listés dans SUPER_ADMIN_EMAILS
  * (e-mails séparés par des virgules), à chaque démarrage de l'API.
  *
- * C'est la seule façon de créer le premier SUPER_ADMIN : un ADMIN ne peut pas
+ * C'est la seule façon de créer le premier SUPER_ADMIN : un CHEF_CENTRE ne peut pas
  * s'attribuer ce rôle. Le compte doit déjà exister (inscription faite).
  * Retirer un e-mail de la variable ne rétrograde pas le compte : un
  * SUPER_ADMIN le fait depuis la page Rôles.

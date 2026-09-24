@@ -51,19 +51,19 @@ export class SupportController {
 
   // ─── Côté support (Admin/Staff) ───
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT)
   @Get('conversations')
   getConversations() {
     return this.supportService.getConversations();
   }
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT)
   @Get('conversations/:userId')
   getConversation(@Param('userId') userId: string) {
     return this.supportService.getConversation(userId);
   }
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT)
   @SkipAudit()
   @Post('conversations/:userId/messages')
   replyToUser(

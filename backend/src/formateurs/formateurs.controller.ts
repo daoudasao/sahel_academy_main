@@ -27,7 +27,7 @@ import type { User } from '@prisma/client';
 
 /** Rôles qui gèrent les formateurs et leurs salaires (alignés sur le dashboard). */
 const ROLES_GESTION_FORMATEURS: Role[] = [
-  Role.ADMIN,
+  Role.CHEF_CENTRE,
   Role.STAFF,
   Role.RESPONSABLE_PEDAGOGIQUE,
   Role.COMPTABLE,

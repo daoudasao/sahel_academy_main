@@ -29,7 +29,7 @@ export class ActualitesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
+  @Roles(Role.CHEF_CENTRE, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
   @Post()
   create(@Body() createPostDto: CreatePostDto) {
     return this.actualitesService.create(createPostDto);
@@ -48,7 +48,7 @@ export class ActualitesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
+  @Roles(Role.CHEF_CENTRE, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
     return this.actualitesService.update(id, updatePostDto);
@@ -56,7 +56,7 @@ export class ActualitesController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
+  @Roles(Role.CHEF_CENTRE, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.actualitesService.remove(id);
@@ -95,7 +95,7 @@ export class ActualitesController {
   // Modération : suppression d'un commentaire (Admin/Formateur/Community Manager)
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
+  @Roles(Role.CHEF_CENTRE, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
   @Delete(':id/commentaires/:cId')
   removeCommentaire(@Param('cId') cId: string) {
     return this.actualitesService.removeCommentaire(cId);

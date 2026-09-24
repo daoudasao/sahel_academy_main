@@ -11,7 +11,7 @@ import { authentifierSocket, optionsSocket } from '../auth/socket-auth';
 import { aUnRole } from '../auth/roles.util';
 
 /** Rôles qui gèrent les notifications (alignés sur le dashboard). */
-const ROLES_GESTION: Role[] = [Role.ADMIN, Role.STAFF, Role.COMMUNITY_MANAGER];
+const ROLES_GESTION: Role[] = [Role.CHEF_CENTRE, Role.STAFF, Role.COMMUNITY_MANAGER];
 
 @WebSocketGateway({ namespace: '/notifications', ...optionsSocket })
 export class NotificationsGateway

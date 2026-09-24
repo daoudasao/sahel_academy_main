@@ -25,7 +25,7 @@ const FORMATEUR_PUBLIC = {
 
 /** Rôles qui gèrent le contenu de toutes les classes (alignés sur le dashboard). */
 export const ROLES_GESTION_CLASSES: Role[] = [
-  Role.ADMIN,
+  Role.CHEF_CENTRE,
   Role.STAFF,
   Role.RESPONSABLE_PEDAGOGIQUE,
 ];

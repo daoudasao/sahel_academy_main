@@ -56,12 +56,12 @@ export class UsersService {
    * Délègue à better-auth (`setUserPassword`) : le hachage et la vérification
    * du rôle administrateur de l'appelant y sont gérés. Les en-têtes de la
    * requête (cookie de session ou bearer) sont transmis pour cette
-   * vérification, en plus de la garde `Roles(ADMIN)` du contrôleur.
+   * vérification, en plus de la garde `Roles(CHEF_CENTRE)` du contrôleur.
    */
   async setPassword(userId: string, newPassword: string) {
     await this.findOne(userId); // 404 explicite si l'utilisateur n'existe pas
 
-    // L'autorisation (rôle ADMIN) est assurée par la garde du contrôleur ; on
+    // L'autorisation (rôle CHEF_CENTRE) est assurée par la garde du contrôleur ; on
     // écrit ici directement via better-auth (hachage + compte « credential »),
     // en reproduisant ce que fait le plugin admin, sans son contrôle de
     // permissions interne.

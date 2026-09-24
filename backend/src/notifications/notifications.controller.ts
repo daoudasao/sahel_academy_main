@@ -17,7 +17,7 @@ import { SkipAudit } from '../audit/skip-audit.decorator';
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.COMMUNITY_MANAGER)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.COMMUNITY_MANAGER)
   @Post()
   create(@Body() createNotificationDto: CreateNotificationDto) {
     return this.notificationsService.create(createNotificationDto);
@@ -42,14 +42,14 @@ export class NotificationsController {
     return this.notificationsService.marquerAlertesVues(user.id, alerteIds);
   }
 
-  @Roles(Role.ADMIN, Role.STAFF, Role.COMMUNITY_MANAGER)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.COMMUNITY_MANAGER)
   @Get('admin')
   findAllAdmin() {
     return this.notificationsService.findAllAdmin();
   }
 
   /** Suppression définitive pour tous les destinataires (dashboard). */
-  @Roles(Role.ADMIN, Role.STAFF, Role.COMMUNITY_MANAGER)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.COMMUNITY_MANAGER)
   @Delete('admin/:id')
   removeDefinitivement(@Param('id') id: string) {
     return this.notificationsService.removeDefinitivement(id);

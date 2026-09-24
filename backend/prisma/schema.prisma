@@ -14,10 +14,10 @@ datasource db {
 // ─────────────────────────────────────────
 
 enum Role {
-  // Au-dessus d'ADMIN : seul à consulter le journal d'audit et à pouvoir
-  // gérer les comptes ADMIN / SUPER_ADMIN. Attribué via SUPER_ADMIN_EMAILS.
+  // Au-dessus de CHEF_CENTRE : seul à consulter le journal d'audit et à pouvoir
+  // gérer les comptes CHEF_CENTRE / SUPER_ADMIN. Attribué via SUPER_ADMIN_EMAILS.
   SUPER_ADMIN
-  ADMIN
+  CHEF_CENTRE
   STAFF
   ETUDIANT
   FORMATEUR

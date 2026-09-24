@@ -7,7 +7,7 @@ import { Role } from '@prisma/client';
  */
 export const ROLES_EQUIPE: readonly Role[] = [
   Role.SUPER_ADMIN,
-  Role.ADMIN,
+  Role.CHEF_CENTRE,
   Role.STAFF,
   Role.SUPPORT,
   Role.RESPONSABLE_PEDAGOGIQUE,

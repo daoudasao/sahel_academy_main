@@ -66,7 +66,7 @@ async function main() {
   });
 
   // ── Utilisateurs de test ──
-  await prisma.user.create({ data: { nom: 'Admin Sahel', email: 'admin@sahel-academy.org', role: Role.ADMIN, emailVerified: true } });
+  await prisma.user.create({ data: { nom: 'Admin Sahel', email: 'admin@sahel-academy.org', role: Role.CHEF_CENTRE, emailVerified: true } });
   await prisma.user.create({ data: { nom: 'Fatou Sow', email: 'fatou.sow@example.com', role: Role.ETUDIANT, telephone: '+223 70 12 34 56' } });
 
   // ── Actualité ──

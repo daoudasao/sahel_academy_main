@@ -17,7 +17,7 @@ import type { User } from '@prisma/client';
  * fiche complète du formateur) — alignés sur la page Formations du dashboard.
  */
 const ROLES_DETAIL_FORMATION: Role[] = [
-  Role.ADMIN,
+  Role.CHEF_CENTRE,
   Role.STAFF,
   Role.RESPONSABLE_PEDAGOGIQUE,
 ];
@@ -29,7 +29,7 @@ export class FormationsController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.RESPONSABLE_PEDAGOGIQUE)
   @Post()
   create(@Body() createFormationDto: CreateFormationDto) {
     return this.formationsService.create(createFormationDto);
@@ -61,7 +61,7 @@ export class FormationsController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE)
   @Get('demandes/all')
   getDemandes() {
     return this.formationsService.getDemandes();
@@ -69,7 +69,7 @@ export class FormationsController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE)
   @Patch('demandes/:demandeId/valider')
   validerDemande(@Param('demandeId') demandeId: string) {
     return this.formationsService.validerDemande(demandeId);
@@ -77,7 +77,7 @@ export class FormationsController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT, Role.RESPONSABLE_PEDAGOGIQUE)
   @Patch('demandes/:demandeId/refuser')
   refuserDemande(@Param('demandeId') demandeId: string) {
     return this.formationsService.refuserDemande(demandeId);
@@ -94,7 +94,7 @@ export class FormationsController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.RESPONSABLE_PEDAGOGIQUE)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateFormationDto: UpdateFormationDto) {
     return this.formationsService.update(id, updateFormationDto);
@@ -102,7 +102,7 @@ export class FormationsController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.RESPONSABLE_PEDAGOGIQUE)
+  @Roles(Role.CHEF_CENTRE, Role.RESPONSABLE_PEDAGOGIQUE)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.formationsService.remove(id);
