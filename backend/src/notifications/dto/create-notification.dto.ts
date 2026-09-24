@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TypeNotification } from '@prisma/client';
 
@@ -49,4 +49,16 @@ export class CreateNotificationDto {
   @IsString()
   @IsOptional()
   documentNom?: string;
+
+  /**
+   * Écran de l'app ouvert au clic (chemin interne, ex. « /bourse/abc »).
+   * Déduit de la cible s'il n'est pas fourni.
+   */
+  @ApiProperty({ required: false, example: '/support' })
+  @IsString()
+  @IsOptional()
+  @Matches(/^\/[A-Za-z0-9/_-]*$/, {
+    message: 'route doit être un chemin interne (ex. /support).',
+  })
+  route?: string;
 }

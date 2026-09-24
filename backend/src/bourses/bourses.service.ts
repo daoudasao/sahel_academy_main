@@ -56,6 +56,7 @@ export class BoursesService {
           type: TypeNotification.actualite,
           cible: 'global',
           cibleId: bourse.id,
+          route: `/bourse/${bourse.id}`,
         });
       } catch (err) {
         console.error('Erreur lors de l\'envoi de la notification pour la nouvelle bourse:', err);
@@ -170,6 +171,7 @@ export class BoursesService {
             type: TypeNotification.actualite,
             cible: 'global',
             cibleId: updated.id,
+            route: `/bourse/${updated.id}`,
           });
         } catch (err) {
           console.error('Erreur lors de l\'envoi de la notification de publication de bourse:', err);
@@ -400,6 +402,7 @@ export class BoursesService {
             message,
             cible: 'bourse',
             cibleId: candidature.bourseId,
+            route: `/bourse/${candidature.bourseId}/resultat`,
             cibleNom: candidature.bourse.titre,
             documentUrl,
             documentNom,

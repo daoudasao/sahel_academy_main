@@ -8,6 +8,25 @@ import { FirebaseService } from '../firebase/firebase.service';
 /** Notifications adressées à tous les inscrits d'une formation. */
 const CIBLES_FORMATION = ['formation', 'classe'];
 
+/** Écran ouvert par défaut quand la notification n'a pas de destination propre. */
+const ROUTE_PAR_DEFAUT = '/notifications';
+
+/**
+ * Destination au clic, déduite de la cible quand l'émetteur ne l'a pas
+ * précisée (notifications envoyées depuis le dashboard notamment).
+ */
+function routeDeduite(n: CreateNotificationDto): string | undefined {
+  if (n.cible === 'support') return '/support';
+  if (n.cible === 'bourse' && n.cibleId) return `/bourse/${n.cibleId}/resultat`;
+  if (n.type === 'paiement' || n.cible === 'paiement' || n.cible === 'retard') {
+    return '/paiements';
+  }
+  if (n.cible && CIBLES_FORMATION.includes(n.cible) && n.cibleId) {
+    return `/classe/${n.cibleId}`;
+  }
+  return undefined;
+}
+
 @Injectable()
 export class NotificationsService {
   constructor(
@@ -21,6 +40,7 @@ export class NotificationsService {
     if (data.cible === 'individuel' && data.cibleId && !data.userId) {
       data.userId = data.cibleId;
     }
+    data.route ??= routeDeduite(data);
 
     // « Élèves en retard » : une notification personnelle par élève concerné,
     // jamais une diffusion générale.
@@ -90,6 +110,8 @@ export class NotificationsService {
         type: notif.type,
         cible: notif.cible,
         ...(notif.cibleId ? { cibleId: notif.cibleId } : {}),
+        // Écran à ouvrir au clic (lu par l'app et par le service worker web).
+        route: notif.route ?? ROUTE_PAR_DEFAUT,
       },
     };
 
@@ -394,9 +416,10 @@ export class NotificationsService {
           titre: n.titre,
           message: n.message,
           actionRoute:
-            n.cible === 'bourse' && n.cibleId
+            n.route ??
+            (n.cible === 'bourse' && n.cibleId
               ? `/bourse/${n.cibleId}/resultat`
-              : '/notifications',
+              : ROUTE_PAR_DEFAUT),
           actionLabel: 'Consulter',
           badge: n.cible === 'bourse' ? 'Résultat Bourse' : 'Notification',
           couleur: n.titre.toLowerCase().includes('urgent') ? 'danger' : 'info',

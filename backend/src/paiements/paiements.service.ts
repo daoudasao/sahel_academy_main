@@ -203,6 +203,7 @@ export class PaiementsService implements OnModuleInit {
           message: `Votre paiement de ${createPaiementDto.montant} FCFA pour "${libelleAffiche}" a bien été enregistré.`,
           cible: 'paiement',
           cibleId: echeance.id,
+          route: `/paiements/${echeance.formationId}`,
         });
       } catch (err) {
         console.error('Erreur notification paiement:', err);

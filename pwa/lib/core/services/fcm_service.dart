@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import '../api/api_client.dart';
 import '../../models/notification_item.dart';
+import 'clic_notification_web.dart';
 
 /// Service gérant les notifications push Firebase Cloud Messaging (FCM).
 class FcmService {
@@ -29,6 +30,32 @@ class FcmService {
   void attachRouter(GoRouter router) {
     _router = router;
     _checkInitialMessage();
+    // Web : le service worker signale les clics sur les notifications quand
+    // l'app est déjà ouverte dans un onglet.
+    if (kIsWeb && !_ecouteClicsWeb) {
+      _ecouteClicsWeb = true;
+      ecouterClicsNotificationWeb(_navigateToRoute);
+    }
+  }
+
+  bool _ecouteClicsWeb = false;
+
+  /// Écran à ouvrir pour un push : la route fournie par le serveur, sinon
+  /// celle déduite du type et de la cible (anciens envois).
+  static String? _routeDuMessage(RemoteMessage message) {
+    final typeStr = (message.data['type'] ?? '').toString();
+    final type = TypeNotification.values.firstWhere(
+      (t) => t.name == typeStr,
+      orElse: () => TypeNotification.systeme,
+    );
+    return NotificationItem.routeServeur(message.data['route']) ??
+        NotificationItem.determinerRoute(
+          type: type,
+          cible: message.data['cible']?.toString(),
+          cibleId: message.data['cibleId']?.toString(),
+          titre: message.notification?.title ?? '',
+          message: message.notification?.body ?? '',
+        );
   }
 
   void _navigateToRoute(String? route) {
@@ -43,18 +70,7 @@ class FcmService {
   }
 
   void _handleRemoteMessage(RemoteMessage message) {
-    final typeStr = (message.data['type'] ?? '').toString();
-    final type = TypeNotification.values.firstWhere(
-      (t) => t.name == typeStr,
-      orElse: () => TypeNotification.systeme,
-    );
-    final route = NotificationItem.determinerRoute(
-      type: type,
-      cible: message.data['cible']?.toString(),
-      cibleId: message.data['cibleId']?.toString(),
-      titre: message.notification?.title ?? '',
-      message: message.notification?.body ?? '',
-    );
+    final route = _routeDuMessage(message);
     debugPrint('🔔 [FCM Service] Clic notification push -> Route calculée: $route');
     _navigateToRoute(route);
   }
@@ -131,18 +147,7 @@ class FcmService {
               '🔔 [FCM Service] Notification 1er plan reçue: ${notification?.title} - ${notification?.body}',
             );
 
-            final typeStr = (message.data['type'] ?? '').toString();
-            final type = TypeNotification.values.firstWhere(
-              (t) => t.name == typeStr,
-              orElse: () => TypeNotification.systeme,
-            );
-            final route = NotificationItem.determinerRoute(
-              type: type,
-              cible: message.data['cible']?.toString(),
-              cibleId: message.data['cibleId']?.toString(),
-              titre: notification?.title ?? '',
-              message: notification?.body ?? '',
-            );
+            final route = _routeDuMessage(message);
 
             // Affiche la notification système locale même en 1er plan
             if (notification != null) {

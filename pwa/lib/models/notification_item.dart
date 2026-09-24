@@ -59,18 +59,29 @@ class NotificationItem {
       cibleId: cibleId,
       documentUrl: documentUrl,
       documentNom: documentNom,
-      route: determinerRoute(
-        type: type,
-        cible: cible,
-        cibleId: cibleId,
-        titre: titre,
-        message: message,
-      ),
+      route:
+          routeServeur(j['route']) ??
+          determinerRoute(
+            type: type,
+            cible: cible,
+            cibleId: cibleId,
+            titre: titre,
+            message: message,
+          ),
       lu: j['lu'] == true,
     );
   }
 
-  /// Détermine la route de navigation appropriée pour n'importe quelle notification.
+  /// Route fournie par le serveur (champ `route` de la notification ou du
+  /// push). Seuls les chemins internes sont acceptés.
+  static String? routeServeur(Object? valeur) {
+    final route = valeur?.toString().trim() ?? '';
+    return RegExp(r'^/[A-Za-z0-9/_-]*$').hasMatch(route) ? route : null;
+  }
+
+  /// Destination déduite pour les notifications sans route fournie par le
+  /// serveur (anciennes notifications). La cible prime sur le type : une
+  /// notification de résultat de bourse est par exemple de type « classe ».
   static String? determinerRoute({
     required TypeNotification type,
     String? cible,
@@ -80,56 +91,49 @@ class NotificationItem {
   }) {
     final titreLower = titre.toLowerCase();
     final messageLower = message.toLowerCase();
+    final aId = cibleId != null && cibleId.isNotEmpty;
 
-    // 1. Paiements
-    if (type == TypeNotification.paiement || cible == 'paiement') {
+    // 1. Messages du support
+    if (cible == 'support') return '/support';
+
+    // 2. Résultat d'une candidature à une bourse
+    if (cible == 'bourse') {
+      return aId ? '/bourse/$cibleId/resultat' : '/resultats';
+    }
+
+    // 3. Paiements
+    if (type == TypeNotification.paiement ||
+        cible == 'paiement' ||
+        cible == 'retard') {
       return '/paiements';
     }
 
-    // 2. Classe / Cours / Inscription
-    if (type == TypeNotification.classe ||
-        cible == 'classe' ||
-        cible == 'formation') {
-      if (cibleId != null && cibleId.isNotEmpty) {
-        return '/classe/$cibleId';
-      }
-      return '/mes-formations';
+    // 4. Classe / Cours / Inscription
+    if (cible == 'classe' || cible == 'formation') {
+      return aId ? '/classe/$cibleId' : '/mes-formations';
     }
+    if (type == TypeNotification.classe) return '/mes-formations';
 
-    // 3. Annonces / Actualités / Discussion
+    // 5. Actualités. Les anciennes notifications d'actualité n'avaient pas
+    //    d'identifiant ; une notification « actualité » globale qui en porte un
+    //    annonçait l'ouverture d'une bourse.
     if (type == TypeNotification.actualite ||
         type == TypeNotification.commentaire ||
         cible == 'actualite') {
-      if (cibleId != null && cibleId.isNotEmpty) {
-        return '/post/$cibleId';
-      }
+      if (cible == 'actualite' && aId) return '/post/$cibleId';
+      if (cible == 'global' && aId) return '/bourse/$cibleId';
       return '/actualite';
     }
 
-    // 4. Bourses & Candidatures
-    if (cible == 'bourse' ||
-        titreLower.contains('bourse') ||
+    // 6. Repères dans le texte (notifications manuelles)
+    if (titreLower.contains('bourse') ||
         messageLower.contains('bourse') ||
         titreLower.contains('candidature') ||
         messageLower.contains('candidature')) {
-      if (cibleId != null && cibleId.isNotEmpty) {
-        return '/bourse/$cibleId';
-      }
       return '/resultats';
     }
-
-    // 5. Support technique / Messages admin
-    if (titreLower.contains('support') ||
-        messageLower.contains('support') ||
-        titreLower.contains('message')) {
+    if (titreLower.contains('support') || messageLower.contains('support')) {
       return '/support';
-    }
-
-    // 6. Autres notifications système
-    if (type == TypeNotification.systeme) {
-      if (cibleId != null && cibleId.isNotEmpty) {
-        return '/formation/$cibleId';
-      }
     }
 
     return null;

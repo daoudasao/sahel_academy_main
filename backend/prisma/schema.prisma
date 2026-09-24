@@ -568,6 +568,9 @@ model Notification {
   envoyePar String?
   documentUrl String?
   documentNom String?
+  // Écran de l'app ouvert au clic (ex. « /post/abc », « /support »).
+  // Null = notification simplement informative (liste des notifications).
+  route     String?
   createdAt DateTime         @default(now())
 
   user      User?            @relation(fields: [userId], references: [id], onDelete: Cascade)

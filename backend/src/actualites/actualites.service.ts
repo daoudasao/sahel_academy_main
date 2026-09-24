@@ -60,6 +60,7 @@ export class ActualitesService {
             : postData.contenu || 'Une nouvelle publication est disponible sur Sahel Academy.',
         cible: 'global',
         envoyePar: postData.auteurNom || 'Sahel Academy',
+        route: `/post/${post.id}`,
       });
     } catch (err) {
       console.error('Erreur notification push actualité:', err);

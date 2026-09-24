@@ -150,6 +150,7 @@ export class SupportService {
             : dto.contenu || 'Nouveau message reçu.',
         cible: 'support',
         envoyePar: 'Support',
+        route: '/support',
         documentUrl: dto.documentUrl,
         documentNom: dto.documentNom,
       });
