@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+// Simple passerelle vers l'application : rien à indexer.
+export const metadata: Metadata = {
+  title: "Publication",
+  robots: { index: false, follow: true },
+};
 
 interface PageProps {
   params: Promise<{ id: string }>;

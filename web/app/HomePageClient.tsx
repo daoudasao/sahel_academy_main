@@ -66,9 +66,9 @@ export default function HomePageClient({
               priority
               className="mx-auto mb-3 h-auto w-[220px]"
             />
-            <p className="mt-2 text-xs sm:text-sm text-emerald-100/90 font-medium">
+            <h1 className="mt-2 text-xs sm:text-sm text-emerald-100/90 font-medium">
               Plateforme officielle de recrutement &amp; vérification de bourses d&apos;études
-            </p>
+            </h1>
           </div>
 
           {/* Navigation Tabs */}
