@@ -10,6 +10,7 @@ import { TypeNotification } from '@prisma/client';
 import { CreateEcheanceDto } from './dto/create-echeance.dto';
 import { CreatePaiementDto } from './dto/create-paiement.dto';
 import { UpdatePaiementDto } from './dto/update-paiement.dto';
+import { formatEcheanceLibelle } from './echeance-libelle';
 
 /** Champs de l'utilisateur joints à une échéance (pas de token ni d'infos de bannissement). */
 const USER_ECHEANCE = {
@@ -133,18 +134,7 @@ export class PaiementsService implements OnModuleInit {
   }
 
   private formatEcheanceLibelle(libelle: string, dateEcheance?: Date | string | null): string {
-    if (!libelle) return '';
-    if ((libelle.toLowerCase().startsWith('mensualit') || libelle.includes('/')) && dateEcheance) {
-      try {
-        const d = new Date(dateEcheance);
-        if (!isNaN(d.getTime())) {
-          const monthName = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-          const formattedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-          return `Mensualité - ${formattedMonth}`;
-        }
-      } catch (_) {}
-    }
-    return libelle;
+    return formatEcheanceLibelle(libelle, dateEcheance);
   }
 
   async findAllEcheances(userId?: string, formationId?: string) {

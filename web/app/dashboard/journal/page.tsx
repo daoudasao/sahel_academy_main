@@ -41,6 +41,7 @@ const RESSOURCES: Record<string, string> = {
   centres: "Centres",
   formateurs: "Formateurs",
   paiements: "Paiements",
+  salaires: "Salaires formateurs",
   actualites: "Actualités",
   notifications: "Notifications",
   support: "Support",
@@ -65,6 +66,75 @@ const ROLES: Record<string, string> = {
 const libelleRessource = (r: string) => RESSOURCES[r] ?? r;
 const libelleRole = (r?: string | null) => (r ? ROLES[r] ?? r : "—");
 
+/** Filtre « Finances » : paiements des élèves + salaires des formateurs. */
+const FILTRE_FINANCES = "paiements,salaires";
+
+/** Verbes propres à une action sur une route : [réussite, tentative]. */
+const VERBES_ROUTE: Record<string, [string, string]> = {
+  "CREATION:formateurs/compte": ["A créé le compte de connexion de", "A tenté de créer le compte de connexion de"],
+  "CREATION:formateurs": ["A ajouté le formateur", "A tenté d'ajouter le formateur"],
+  "MODIFICATION:formateurs/:id": ["A modifié le formateur", "A tenté de modifier le formateur"],
+  "SUPPRESSION:formateurs/:id": ["A supprimé le formateur", "A tenté de supprimer le formateur"],
+  "CREATION:paiements": ["A créé l'échéance", "A tenté de créer l'échéance"],
+  "CREATION:paiements/:id/historique": ["A enregistré le paiement", "A tenté d'enregistrer le paiement"],
+  "MODIFICATION:paiements/historique/:hId": ["A modifié le paiement", "A tenté de modifier le paiement"],
+  "SUPPRESSION:paiements/:id/historique/:hId": ["A supprimé le paiement", "A tenté de supprimer le paiement"],
+  "CREATION:formateurs/:id/salaires": ["A créé la fiche de salaire", "A tenté de créer la fiche de salaire"],
+  "MODIFICATION:formateurs/salaires/:ficheId": ["A modifié la fiche de salaire", "A tenté de modifier la fiche de salaire"],
+  "SUPPRESSION:formateurs/salaires/:ficheId": ["A supprimé la fiche de salaire", "A tenté de supprimer la fiche de salaire"],
+  "CREATION:formateurs/salaires/:ficheId/versements": ["A enregistré le versement de salaire", "A tenté d'enregistrer le versement de salaire"],
+  "SUPPRESSION:formateurs/salaires/:ficheId/versements/:vId": ["A supprimé le versement de salaire", "A tenté de supprimer le versement de salaire"],
+};
+
+/** Champs comparés entre l'état « avant » et « après » d'une modification. */
+const CHAMPS_SUIVIS: Record<string, { label: string; argent?: boolean; date?: boolean }> = {
+  montant: { label: "Montant", argent: true },
+  montantDu: { label: "Montant dû", argent: true },
+  montantPaye: { label: "Montant payé", argent: true },
+  totalVerse: { label: "Total versé", argent: true },
+  salaireMensuel: { label: "Salaire mensuel", argent: true },
+  mois: { label: "Mois" },
+  note: { label: "Note" },
+  date: { label: "Date", date: true },
+  dateEcheance: { label: "Échéance", date: true },
+  nom: { label: "Nom" },
+  email: { label: "E-mail" },
+  specialite: { label: "Spécialité" },
+  actif: { label: "Actif" },
+};
+
+const fcfa = (n: number) => `${new Intl.NumberFormat("fr-FR").format(n)} FCFA`;
+
+function valeurLisible(cle: string, v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  const champ = CHAMPS_SUIVIS[cle];
+  if (champ?.argent && typeof v === "number") return fcfa(v);
+  if (champ?.date && typeof v === "string") return new Date(v).toLocaleDateString("fr-FR");
+  if (typeof v === "boolean") return v ? "oui" : "non";
+  return String(v);
+}
+
+/**
+ * Changements « avant → après » d'une modification (ex. Montant : 50 000 →
+ * 5 000 FCFA). Pour une modification refusée ou échouée, compare l'état
+ * « avant » aux valeurs tentées (préfixe « Tenté »).
+ */
+function changements(log: AuditLog): string[] {
+  const avant = log.details?.avant as Record<string, unknown> | undefined;
+  const apres = log.details?.apres as Record<string, unknown> | undefined;
+  const corps = log.details?.corps as Record<string, unknown> | undefined;
+  if (!avant) return [];
+  const tente = !apres && !log.succes && log.action === "MODIFICATION";
+  const cible = apres ?? (tente ? corps : undefined);
+  if (!cible) return [];
+  return Object.keys(CHAMPS_SUIVIS)
+    .filter((cle) => cle in cible && avant[cle] !== cible[cle])
+    .map(
+      (cle) =>
+        `${tente ? "Tenté — " : ""}${CHAMPS_SUIVIS[cle].label} : ${valeurLisible(cle, avant[cle])} → ${valeurLisible(cle, cible[cle])}`
+    );
+}
+
 /** Phrase lisible décrivant l'action (« a supprimé « X » (Bourses) »). */
 function decrire(log: AuditLog): string {
   const cible = log.libelle
@@ -86,6 +156,8 @@ function decrire(log: AuditLog): string {
   if (log.ressource === "users" && typeof corps.role === "string") {
     return `${tente ? "A tenté de changer" : "A changé"} le rôle de ${cible} en ${libelleRole(corps.role)}`;
   }
+  const verbeRoute = VERBES_ROUTE[`${log.action}:${log.route}`];
+  if (verbeRoute) return `${tente ? verbeRoute[1] : verbeRoute[0]} ${cible}`.trim();
   const verbes: Record<string, [string, string]> = {
     CREATION: ["A créé", "A tenté de créer"],
     MODIFICATION: ["A modifié", "A tenté de modifier"],
@@ -308,6 +380,7 @@ export default function JournalAuditPage() {
             onChange={(e) => changer({ ressource: e.target.value || undefined })}
           >
             <option value="">Toutes les ressources</option>
+            <option value={FILTRE_FINANCES}>Finances (paiements + salaires)</option>
             {options.ressources.map((r) => (
               <option key={r} value={r}>{libelleRessource(r)}</option>
             ))}
@@ -415,7 +488,12 @@ export default function JournalAuditPage() {
                       <td className="p-3">
                         <span className={`badge ${action.badge} font-semibold whitespace-nowrap`}>{action.label}</span>
                       </td>
-                      <td className="p-3 text-[var(--text-primary)]">{decrire(log)}</td>
+                      <td className="p-3 text-[var(--text-primary)]">
+                        <div>{decrire(log)}</div>
+                        {changements(log).map((c) => (
+                          <div key={c} className="text-[11px] font-semibold text-amber-700 mt-0.5">{c}</div>
+                        ))}
+                      </td>
                       <td className="p-3 whitespace-nowrap">
                         {log.succes ? (
                           <span className="badge badge-success">Réussie</span>

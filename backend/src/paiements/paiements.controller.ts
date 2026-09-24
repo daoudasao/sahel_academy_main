@@ -22,6 +22,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { estEquipe } from '../auth/roles.util';
 import { Role } from '@prisma/client';
 import type { User } from '@prisma/client';
+import { AuditContexte } from '../audit/audit-contexte.decorator';
 
 @ApiTags('paiements')
 @ApiBearerAuth('access-token')
@@ -30,6 +31,7 @@ import type { User } from '@prisma/client';
 export class PaiementsController {
   constructor(private readonly paiementsService: PaiementsService) {}
 
+  @AuditContexte('echeance')
   @Roles(Role.ADMIN, Role.COMPTABLE)
   @Post()
   createEcheance(@Body() createEcheanceDto: CreateEcheanceDto) {
@@ -62,18 +64,24 @@ export class PaiementsController {
     return echeance;
   }
 
+  // Contexte d'audit « paiement » : montant, élève et échéance ; ancien et
+  // nouveau montant pour une modification, montant supprimé pour une
+  // suppression.
+  @AuditContexte('paiement')
   @Roles(Role.ADMIN, Role.STAFF, Role.COMPTABLE)
   @Post(':id/historique')
   addPaiement(@Param('id') id: string, @Body() createPaiementDto: CreatePaiementDto) {
     return this.paiementsService.addPaiement(id, createPaiementDto);
   }
 
+  @AuditContexte('paiement')
   @Roles(Role.ADMIN, Role.COMPTABLE)
   @Delete(':id/historique/:hId')
   removePaiement(@Param('id') id: string, @Param('hId') hId: string) {
     return this.paiementsService.removePaiement(hId);
   }
 
+  @AuditContexte('paiement')
   @Roles(Role.ADMIN, Role.STAFF, Role.COMPTABLE)
   @Patch('historique/:hId')
   updatePaiement(@Param('hId') hId: string, @Body() updatePaiementDto: UpdatePaiementDto) {

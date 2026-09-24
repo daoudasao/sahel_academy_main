@@ -14,6 +14,12 @@ import {
   userAgentDe,
 } from './audit.util';
 import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
+import {
+  CONTEXTES_AUDIT,
+  type CleContexte,
+  type ContexteAudit,
+  type Instantane,
+} from './contextes';
 
 export interface EntreeAudit {
   userId?: string | null;
@@ -83,7 +89,17 @@ export class AuditService {
    */
   journaliserRequete(
     req: RequeteAuditee,
-    resultat: { statut: number; succes: boolean; reponse?: unknown; erreur?: unknown },
+    resultat: {
+      statut: number;
+      succes: boolean;
+      reponse?: unknown;
+      erreur?: unknown;
+      /**
+       * Contexte d'audit de la route (@AuditContexte) et, s'il a été lu avant
+       * l'action (modification, suppression), l'état « avant ».
+       */
+      contexte?: { cle: CleContexte; avant?: Instantane | null };
+    },
   ): void {
     const methode = (req.method ?? '').toUpperCase();
     const action = ACTION_PAR_METHODE[methode];
@@ -130,9 +146,86 @@ export class AuditService {
       ip: ipDe(req),
       userAgent: userAgentDe(req),
     };
-    void this.libelleCompte(ressource, ressourceId, libelle).then((nom) =>
-      this.enregistrer({ ...entree, libelle: nom }),
-    );
+    const completion = resultat.contexte
+      ? this.avecContexte(entree, req.params ?? {}, libelle, resultat)
+      : this.libelleCompte(ressource, ressourceId, libelle).then(
+          (nom): EntreeAudit => ({ ...entree, libelle: nom }),
+        );
+    void completion.then((complete) => this.enregistrer(complete));
+  }
+
+  /**
+   * Lit l'état d'un élément avant une modification ou une suppression
+   * (appelé par l'intercepteur avant l'action). Ne lève jamais.
+   */
+  async lireAvant(
+    cle: CleContexte,
+    params: Record<string, unknown> | undefined,
+  ): Promise<Instantane | null> {
+    try {
+      return await CONTEXTES_AUDIT[cle].lire(this.prisma, params ?? {}, undefined);
+    } catch (e) {
+      this.logger.warn(`Journal d'audit : état « avant » illisible (${cle}) : ${e}`);
+      return null;
+    }
+  }
+
+  /**
+   * Complète l'entrée avec l'état de l'élément (avant / après) et un libellé
+   * lisible (montant, élève, formateur…). Ne lève jamais.
+   */
+  private async avecContexte(
+    entree: EntreeAudit,
+    params: Record<string, unknown>,
+    libelle: string | null,
+    resultat: {
+      succes: boolean;
+      reponse?: unknown;
+      contexte?: { cle: CleContexte; avant?: Instantane | null };
+    },
+  ): Promise<EntreeAudit> {
+    const { cle, avant: avantLu } = resultat.contexte!;
+    const def: ContexteAudit = CONTEXTES_AUDIT[cle];
+    let avant = avantLu ?? null;
+    let apres: Instantane | null = null;
+    try {
+      if (resultat.succes) {
+        // Après une suppression il n'y a plus rien à relire.
+        if (entree.methode !== 'DELETE') {
+          apres = await def.lire(this.prisma, params, resultat.reponse);
+        }
+      } else if (avantLu === undefined) {
+        // Action refusée ou échouée : l'élément n'a pas bougé, son état
+        // actuel est donc l'état « avant ».
+        avant = await def.lire(this.prisma, params, undefined);
+      }
+    } catch (e) {
+      this.logger.warn(`Journal d'audit : contexte illisible (${cle}) : ${e}`);
+    }
+
+    const reference = apres ?? avant;
+    const base =
+      entree.details && typeof entree.details === 'object'
+        ? (entree.details as Record<string, unknown>)
+        : {};
+    const details = {
+      ...base,
+      ...(avant ? { avant } : {}),
+      ...(apres ? { apres } : {}),
+    };
+    const corps =
+      base.corps && typeof base.corps === 'object'
+        ? (base.corps as Record<string, unknown>)
+        : {};
+    return {
+      ...entree,
+      ressource:
+        typeof def.ressource === 'function'
+          ? def.ressource({ avant, apres, corps })
+          : def.ressource,
+      libelle: (reference && def.libelle(reference)) || libelle,
+      details: Object.keys(details).length > 0 ? details : null,
+    };
   }
 
   /**
@@ -232,7 +325,15 @@ export class AuditService {
     const where: Prisma.AuditLogWhereInput = {};
     if (q.userId) where.userId = q.userId;
     if (q.action) where.action = q.action;
-    if (q.ressource) where.ressource = q.ressource;
+    if (q.ressource) {
+      // Plusieurs ressources possibles, séparées par des virgules
+      // (ex. « paiements,salaires » pour toutes les finances).
+      const ressources = q.ressource
+        .split(',')
+        .map((r) => r.trim())
+        .filter(Boolean);
+      where.ressource = ressources.length > 1 ? { in: ressources } : ressources[0];
+    }
     if (q.succes) where.succes = q.succes === 'true';
     if (q.du || q.au) {
       where.createdAt = {

@@ -7,10 +7,12 @@ import {
 } from '@nestjs/common';
 import { HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
-import { Observable, catchError, tap, throwError } from 'rxjs';
+import { Observable, catchError, from, of, switchMap, tap, throwError } from 'rxjs';
 import { estEquipe } from '../auth/roles.util';
+import { AUDIT_CONTEXTE_KEY } from './audit-contexte.decorator';
 import { AuditService, RequeteAuditee } from './audit.service';
 import { ACTION_PAR_METHODE } from './audit.util';
+import type { CleContexte, Instantane } from './contextes';
 import { SKIP_AUDIT_KEY } from './skip-audit.decorator';
 
 /**
@@ -51,18 +53,35 @@ export class AuditInterceptor implements NestInterceptor {
         context.getHandler(),
       ) ?? (methode === 'POST' ? 201 : 200);
 
-    return next.handle().pipe(
-      tap((reponse: unknown) =>
-        this.audit.journaliserRequete(req, {
-          statut: statutSucces,
-          succes: true,
-          reponse,
-        }),
-      ),
-      catchError((erreur: unknown) => {
-        const statut = erreur instanceof HttpException ? erreur.getStatus() : 500;
-        this.audit.journaliserRequete(req, { statut, succes: false, erreur });
-        return throwError(() => erreur);
+    // Contexte d'audit (finances…) : pour une modification ou une
+    // suppression, l'état « avant » doit être lu AVANT l'action.
+    const cle = this.reflector.get<CleContexte | undefined>(
+      AUDIT_CONTEXTE_KEY,
+      context.getHandler(),
+    );
+    const avant$: Observable<Instantane | null | undefined> =
+      cle && methode !== 'POST'
+        ? from(this.audit.lireAvant(cle, req.params))
+        : of(undefined);
+
+    return avant$.pipe(
+      switchMap((avant) => {
+        const contexte = cle ? { cle, avant } : undefined;
+        return next.handle().pipe(
+          tap((reponse: unknown) =>
+            this.audit.journaliserRequete(req, {
+              statut: statutSucces,
+              succes: true,
+              reponse,
+              contexte,
+            }),
+          ),
+          catchError((erreur: unknown) => {
+            const statut = erreur instanceof HttpException ? erreur.getStatus() : 500;
+            this.audit.journaliserRequete(req, { statut, succes: false, erreur, contexte });
+            return throwError(() => erreur);
+          }),
+        );
       }),
     );
   }

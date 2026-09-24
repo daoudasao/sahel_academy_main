@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { FormateursService } from './formateurs.service';
 import { CreateFormateurDto } from './dto/create-formateur.dto';
+import { CreateCompteFormateurDto } from './dto/create-compte-formateur.dto';
+import { AuditContexte } from '../audit/audit-contexte.decorator';
 import { UpdateFormateurDto } from './dto/update-formateur.dto';
 import { CreateFicheDto } from './dto/create-fiche.dto';
 import { UpdateFicheDto } from './dto/update-fiche.dto';
@@ -39,6 +41,17 @@ const ROLES_GESTION_FORMATEURS: Role[] = [
 export class FormateursController {
   constructor(private readonly formateursService: FormateursService) {}
 
+  /**
+   * Crée le compte de connexion d'un formateur (rôle FORMATEUR imposé). Passe
+   * par Nest plutôt que par le plugin admin de better-auth : mêmes droits que
+   * la gestion des formateurs, et action tracée dans le journal d'audit.
+   */
+  @Post('compte')
+  creerCompte(@Body() dto: CreateCompteFormateurDto) {
+    return this.formateursService.creerCompte(dto);
+  }
+
+  @AuditContexte('formateur')
   @Post()
   create(@Body() createFormateurDto: CreateFormateurDto) {
     return this.formateursService.create(createFormateurDto);
@@ -67,6 +80,8 @@ export class FormateursController {
     return this.formateursService.getGains(id);
   }
 
+  // Contexte d'audit : trace l'ancien et le nouveau salaire mensuel.
+  @AuditContexte('formateur')
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -75,6 +90,7 @@ export class FormateursController {
     return this.formateursService.update(id, updateFormateurDto);
   }
 
+  @AuditContexte('formateur')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.formateursService.remove(id);
@@ -87,16 +103,19 @@ export class FormateursController {
     return this.formateursService.getSalaires(id);
   }
 
+  @AuditContexte('ficheSalaire')
   @Post(':id/salaires')
   createFiche(@Param('id') id: string, @Body() dto: CreateFicheDto) {
     return this.formateursService.createFiche(id, dto);
   }
 
+  @AuditContexte('ficheSalaire')
   @Patch('salaires/:ficheId')
   updateFiche(@Param('ficheId') ficheId: string, @Body() dto: UpdateFicheDto) {
     return this.formateursService.updateFiche(ficheId, dto);
   }
 
+  @AuditContexte('ficheSalaire')
   @Delete('salaires/:ficheId')
   removeFiche(@Param('ficheId') ficheId: string) {
     return this.formateursService.removeFiche(ficheId);
@@ -104,6 +123,9 @@ export class FormateursController {
 
   // ─── Salaires : versements ───
 
+  // Le montant réellement versé peut être plafonné au reste dû : l'état
+  // « après » du journal fait foi, pas le montant saisi.
+  @AuditContexte('versementSalaire')
   @Post('salaires/:ficheId/versements')
   addVersement(
     @Param('ficheId') ficheId: string,
@@ -112,6 +134,7 @@ export class FormateursController {
     return this.formateursService.addVersement(ficheId, dto);
   }
 
+  @AuditContexte('versementSalaire')
   @Delete('salaires/:ficheId/versements/:vId')
   removeVersement(@Param('vId') vId: string) {
     return this.formateursService.removeVersement(vId);

@@ -105,6 +105,9 @@ export const formationsApi = {
 };
 
 export const formateursApi = {
+  /** Crée le compte de connexion d'un formateur (rôle FORMATEUR imposé côté API). */
+  creerCompte: (data: { nom: string; email: string; motDePasse: string; telephone?: string }) =>
+    api.post<{ id: string; nom: string; email: string; role: string }>("/formateurs/compte", data),
   list: () => api.get<any[]>("/formateurs"),
   get: (id: string) => api.get<any>(`/formateurs/${id}`),
   getGains: (id: string) => api.get<any>(`/formateurs/${id}/gains`),

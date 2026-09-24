@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useFormateurs } from "@/app/context/FormateursContext";
 import { salaireTotalVerse, formatFCFA } from "@/app/lib/mock-data";
-import { formationsApi, usersApi, departementsApi, paiementsApi } from "@/app/lib/api";
-import { authClient } from "@/app/lib/auth-client";
+import { formationsApi, usersApi, departementsApi, paiementsApi, formateursApi } from "@/app/lib/api";
 import { ChevronDown, Check, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   Dialog,
@@ -90,18 +89,17 @@ export default function FormateursPage() {
         if (!profForm.email || !profForm.motDePasse) {
           throw new Error("Email et mot de passe requis pour créer un compte.");
         }
-        const { data, error } = await authClient.admin.createUser({
-          name: profForm.nom.trim(),
-          email: profForm.email,
-          password: profForm.motDePasse,
-          role: "FORMATEUR" as any,
+        if (profForm.motDePasse.length < 8) {
+          throw new Error("Le mot de passe doit contenir au moins 8 caractères.");
+        }
+        // Création via l'API (rôle FORMATEUR imposé, action tracée au journal).
+        const compte = await formateursApi.creerCompte({
+          nom: profForm.nom.trim(),
+          email: profForm.email.trim(),
+          motDePasse: profForm.motDePasse,
+          telephone: profForm.telephone || undefined,
         });
-        if (error) {
-          throw new Error(error.message || "Erreur lors de la création du compte.");
-        }
-        if (data && data.user && data.user.id) {
-          finalUserId = data.user.id;
-        }
+        finalUserId = compte.id;
       }
 
       const salaire = Math.max(0, Number(profForm.salaireMensuel) || 0);
@@ -312,7 +310,7 @@ export default function FormateursPage() {
                   ) : (
                     <div className="space-y-2 mt-3">
                       <label className="text-sm font-medium">Mot de passe pour le nouveau compte <span className="text-red-500">*</span></label>
-                      <input type="password" className="form-input w-full" value={profForm.motDePasse || ""} onChange={(e) => setProfForm({ ...profForm, motDePasse: e.target.value })} placeholder="Mot de passe" />
+                      <input type="password" className="form-input w-full" minLength={8} value={profForm.motDePasse || ""} onChange={(e) => setProfForm({ ...profForm, motDePasse: e.target.value })} placeholder="8 caractères minimum" />
                     </div>
                   )}
                 </div>

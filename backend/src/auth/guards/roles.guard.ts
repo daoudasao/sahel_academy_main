@@ -4,6 +4,8 @@ import { Role } from '@prisma/client';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { AuditService, RequeteAuditee } from '../../audit/audit.service';
 import { SKIP_AUDIT_KEY } from '../../audit/skip-audit.decorator';
+import { AUDIT_CONTEXTE_KEY } from '../../audit/audit-contexte.decorator';
+import type { CleContexte } from '../../audit/contextes';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -56,10 +58,17 @@ export class RolesGuard implements CanActivate {
       context.getClass(),
     ]);
     if (ignorer) return;
+    // Élément financier visé (montant, élève…) : l'action ayant été refusée,
+    // son état actuel est l'état « avant », relu par le journal.
+    const cle = this.reflector.get<CleContexte | undefined>(
+      AUDIT_CONTEXTE_KEY,
+      context.getHandler(),
+    );
     this.audit.journaliserRequete(request, {
       statut: 403,
       succes: false,
       erreur: refus,
+      ...(cle ? { contexte: { cle } } : {}),
     });
   }
 }

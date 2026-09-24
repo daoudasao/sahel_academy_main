@@ -2,8 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
+import { Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { definirMotDePasse } from '../auth/mot-de-passe';
+import { CreateCompteFormateurDto } from './dto/create-compte-formateur.dto';
 import { CreateFormateurDto } from './dto/create-formateur.dto';
 import { UpdateFormateurDto } from './dto/update-formateur.dto';
 import { CreateFicheDto } from './dto/create-fiche.dto';
@@ -13,6 +17,49 @@ import { CreateVersementDto } from './dto/create-versement.dto';
 @Injectable()
 export class FormateursService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Crée le compte de connexion d'un formateur. Le rôle FORMATEUR est imposé :
+   * ce point d'entrée ne peut pas servir à créer un compte d'administration.
+   */
+  async creerCompte(dto: CreateCompteFormateurDto) {
+    // better-auth compare les e-mails en minuscules à la connexion.
+    const email = dto.email.trim().toLowerCase();
+    const messageDoublon =
+      'Un compte existe déjà avec cet e-mail : liez plutôt ce formateur au compte existant.';
+    const existant = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (existant) throw new ConflictException(messageDoublon);
+
+    let user: { id: string; nom: string; email: string; role: Role };
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          nom: dto.nom.trim(),
+          email,
+          telephone: dto.telephone?.trim() || undefined,
+          role: Role.FORMATEUR,
+        },
+        select: { id: true, nom: true, email: true, role: true },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException(messageDoublon);
+      }
+      throw e;
+    }
+
+    try {
+      await definirMotDePasse(user.id, dto.motDePasse);
+    } catch {
+      // Pas de compte sans mot de passe : on annule la création.
+      await this.prisma.user.delete({ where: { id: user.id } }).catch(() => undefined);
+      throw new BadRequestException('Impossible de définir le mot de passe du compte.');
+    }
+    return user;
+  }
 
   async create(createFormateurDto: CreateFormateurDto) {
     return this.prisma.formateur.create({

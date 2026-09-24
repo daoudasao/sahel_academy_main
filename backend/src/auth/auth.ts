@@ -137,9 +137,15 @@ export const auth = betterAuth({
   // Auth mobile (Flutter) : token via en-tete Authorization Bearer
   plugins: [
     bearer(),
+    // Plugin admin : conservé pour son schéma (rôle, bannissement…). Ses
+    // endpoints /auth/admin/* ne sont volontairement accordés à AUCUN rôle de
+    // l'application (ils attendent les rôles « admin »/« user » en minuscules) :
+    // toute opération d'administration passe par les routes Nest, qui
+    // appliquent les droits (dont la protection du SUPER_ADMIN) et sont
+    // tracées dans le journal d'audit. Ne pas ajouter `adminRoles` sans
+    // reproduire ces garde-fous.
     admin({
       defaultRole: 'ETUDIANT',
-      adminRole: 'ADMIN',
     }),
     // Jeton a usage unique : sert de pont pour le flux OAuth web. Apres le
     // retour de Google, le backend (qui a le cookie de session) genere un

@@ -6,8 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { auth } from '../auth/auth';
-import { createLocalAccountIssuer } from '@better-auth/core/db';
+import { definirMotDePasse } from '../auth/mot-de-passe';
 import { PaiementsService } from '../paiements/paiements.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -67,21 +66,7 @@ export class UsersService {
     // en reproduisant ce que fait le plugin admin, sans son contrôle de
     // permissions interne.
     try {
-      const ctx = await auth.$context;
-      const hashed = await ctx.password.hash(newPassword);
-      const compteExistant =
-        await ctx.internalAdapter.findCredentialAccount(userId);
-      if (compteExistant) {
-        await ctx.internalAdapter.updatePassword(userId, hashed);
-      } else {
-        await ctx.internalAdapter.createAccount({
-          userId,
-          providerId: 'credential',
-          issuer: createLocalAccountIssuer('credential'),
-          accountId: userId,
-          password: hashed,
-        });
-      }
+      await definirMotDePasse(userId, newPassword);
       return { success: true };
     } catch (e) {
       this.logger.error(
