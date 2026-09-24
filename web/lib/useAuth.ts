@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   CandidateUser,
   exchangeOneTimeToken,
   completerProfilCandidat,
 } from "./api";
+import { useSession, signOut } from "@/app/lib/auth-client";
 
 const AUTH_KEY = "sahel_verif_candidate";
 const EVENT_AUTH = "sahel-auth-change";
@@ -45,20 +46,62 @@ function ecrireUser(u: CandidateUser | null) {
   }
 }
 
+/** Oublie le candidat mémorisé localement (utilisé par la barre de session). */
+export function effacerCandidatLocal() {
+  ecrireUser(null);
+}
+
 export function useAuth() {
-  const [user, setUser] = useState<CandidateUser | null>(null);
+  const [localUser, setUser] = useState<CandidateUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Session better-auth (cookie) : ouverte par /login ou par le back-office.
+  // Sans elle, un utilisateur connecté via /login verrait quand même le
+  // formulaire de connexion candidat (le localStorage étant vide).
+  const { data: session, isPending: sessionPending, refetch } = useSession();
+
+  const user = useMemo<CandidateUser | null>(() => {
+    const su = session?.user as
+      | { id: string; name?: string; email: string; telephone?: string | null }
+      | undefined;
+    if (!su) return localUser;
+    const depuisSession: CandidateUser = {
+      id: su.id,
+      nom: su.name || su.email,
+      email: su.email,
+      telephone: su.telephone || undefined,
+      token: session?.session?.token,
+    };
+    // Même compte des deux côtés : le local peut porter des infos plus
+    // fraîches (téléphone tout juste complété).
+    if (localUser?.id === su.id) {
+      return {
+        ...depuisSession,
+        ...localUser,
+        telephone: localUser.telephone || depuisSession.telephone,
+        token: localUser.token || depuisSession.token,
+      };
+    }
+    return depuisSession;
+  }, [session, localUser]);
 
   const saveUser = useCallback((u: CandidateUser) => {
     setUser(u);
     ecrireUser(u);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setUser(null);
     ecrireUser(null);
-  }, []);
+    if (session) {
+      try {
+        await signOut();
+      } catch {
+        // Ignore
+      }
+    }
+  }, [session]);
 
   // Synchronisation entre instances (et entre onglets) : toute connexion ou
   // déconnexion faite ailleurs se répercute ici.
@@ -124,17 +167,17 @@ export function useAuth() {
 
   const completerProfil = useCallback(
     async (telephone: string, nom?: string) => {
-      const actuel = lireUser();
-      if (!actuel) return;
-      const misAJour = await completerProfilCandidat(actuel, { telephone, nom });
+      if (!user) return;
+      const misAJour = await completerProfilCandidat(user, { telephone, nom });
       saveUser(misAJour);
+      if (session) refetch();
     },
-    [saveUser]
+    [user, session, saveUser, refetch]
   );
 
   return {
     user,
-    loading,
+    loading: loading || sessionPending,
     authError,
     setAuthError,
     besoinCompletion,

@@ -25,7 +25,7 @@ interface BourseDetailClientProps {
 }
 
 export default function BourseDetailClient({ bourse }: BourseDetailClientProps) {
-  const { user, saveUser, logout, besoinCompletion, completerProfil, authError } = useAuth();
+  const { user, loading: authLoading, saveUser, logout, besoinCompletion, completerProfil, authError } = useAuth();
 
   // Candidature state
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
@@ -169,6 +169,10 @@ export default function BourseDetailClient({ bourse }: BourseDetailClientProps) 
                     <span>Découvrir les autres opportunités</span>
                   </Link>
                 </div>
+              </div>
+            ) : authLoading ? (
+              <div className="py-10 flex justify-center">
+                <div className="w-6 h-6 rounded-full border-2 border-emerald-700 border-t-transparent animate-spin" />
               </div>
             ) : !user ? (
               <div className="space-y-3">

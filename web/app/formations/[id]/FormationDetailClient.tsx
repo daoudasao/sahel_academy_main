@@ -52,7 +52,7 @@ export default function FormationDetailClient({
   formation,
   bourseLiee,
 }: FormationDetailClientProps) {
-  const { user, saveUser, logout, besoinCompletion, completerProfil, authError } = useAuth();
+  const { user, loading: authLoading, saveUser, logout, besoinCompletion, completerProfil, authError } = useAuth();
 
   // La demande est mémorisée avec l'id de son propriétaire : après une
   // déconnexion / reconnexion, l'état du compte précédent n'est jamais réutilisé.
@@ -265,7 +265,11 @@ export default function FormationDetailClient({
 
           {/* Inscription au cours */}
           <div className="p-6 sm:p-8 space-y-6">
-            {!user ? (
+            {authLoading ? (
+              <div className="py-10 flex justify-center">
+                <div className="w-6 h-6 rounded-full border-2 border-emerald-700 border-t-transparent animate-spin" />
+              </div>
+            ) : !user ? (
               <div className="space-y-3">
                 {authError && (
                   <div className="flex items-center gap-2 p-3.5 rounded-xl bg-red-50 text-red-700 text-xs font-medium border border-red-200">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "@/app/lib/auth-client";
 import { isStaffOrAdminRole } from "@/app/lib/permissions";
+import { effacerCandidatLocal } from "@/lib/useAuth";
 import { LogOut, LayoutDashboard, LogIn, User, ClipboardList } from "lucide-react";
 
 /**
@@ -65,6 +66,7 @@ export default function SessionBar() {
             type="button"
             onClick={async () => {
               await signOut();
+              effacerCandidatLocal();
               router.refresh();
             }}
             className="flex items-center gap-1 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/50 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 px-2.5 py-1 text-xs font-bold transition-colors cursor-pointer"
