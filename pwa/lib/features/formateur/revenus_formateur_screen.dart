@@ -33,8 +33,8 @@ class RevenusFormateurScreen extends StatelessWidget {
                 ...espace.salaires.map((f) => _CarteFiche(fiche: f)),
               const SizedBox(height: 24),
               const _Titre(
-                'Gains par classe',
-                'Votre part sur les paiements encaissés',
+                'Mes gains par cours',
+                'Ce que vous gagnez sur chacun de vos cours',
               ),
               const SizedBox(height: 10),
               if (espace.classes.isEmpty)
@@ -243,8 +243,10 @@ class _CarteFiche extends StatelessWidget {
                 ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.check_circle_outline,
-                      color: Color(0xFF15803D)),
+                  leading: const Icon(
+                    Icons.check_circle_outline,
+                    color: Color(0xFF15803D),
+                  ),
                   title: Text(
                     formatFcfa(v.montant),
                     style: const TextStyle(fontWeight: FontWeight.w700),
@@ -274,37 +276,70 @@ class _LigneGain extends StatelessWidget {
     final pourcentage = classe.pourcentage % 1 == 0
         ? classe.pourcentage.toStringAsFixed(0)
         : classe.pourcentage.toStringAsFixed(1);
+    const vert = Color(0xFF15803D);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
+            // Titre du cours
+            Text(
+              classe.titre,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Rappel du pourcentage convenu, en langage simple
+            Row(
+              children: [
+                Icon(Icons.handshake_outlined, size: 15, color: scheme.outline),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Vous touchez $pourcentage % sur ce cours',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            // Ce que le formateur a gagné, bien en évidence
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: vert.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    classe.titre,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Encaissé : ${formatFcfa(classe.encaissements)} · Part $pourcentage %',
+                    'Ce que vous avez gagné',
                     style: TextStyle(
                       fontSize: 12.5,
                       color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    formatFcfa(classe.gain),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      color: vert,
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              formatFcfa(classe.gain),
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF15803D),
               ),
             ),
           ],
