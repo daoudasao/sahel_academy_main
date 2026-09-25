@@ -2,6 +2,9 @@
 /// Peut lui-même contenir des réponses (via [reponses]).
 class Commentaire {
   final String id;
+
+  /// Compte de l'auteur (null pour les anciens commentaires).
+  final String? auteurId;
   final String auteurNom;
   final String auteurRole; // Formateur / Élève / Admin
   final String contenu;
@@ -10,6 +13,7 @@ class Commentaire {
 
   Commentaire({
     required this.id,
+    this.auteurId,
     required this.auteurNom,
     required this.auteurRole,
     required this.contenu,
@@ -24,6 +28,7 @@ class Commentaire {
     final reps = j['reponses'];
     return Commentaire(
       id: (j['id'] ?? '').toString(),
+      auteurId: j['auteurId'] as String?,
       auteurNom: (j['auteur'] ?? j['auteurNom'] ?? '').toString(),
       auteurRole: (j['role'] ?? j['auteurRole'] ?? 'Élève').toString(),
       contenu: (j['contenu'] ?? '').toString(),
@@ -44,6 +49,9 @@ class Commentaire {
 class ClasseMessage {
   final String id;
   final String formationId;
+
+  /// Compte de l'auteur (null pour les anciens messages).
+  final String? auteurId;
   final String auteurNom;
   final String auteurRole; // Formateur
   final String contenu;
@@ -54,6 +62,7 @@ class ClasseMessage {
   ClasseMessage({
     required this.id,
     required this.formationId,
+    this.auteurId,
     required this.auteurNom,
     required this.auteurRole,
     required this.contenu,
@@ -69,6 +78,7 @@ class ClasseMessage {
     return ClasseMessage(
       id: (j['id'] ?? '').toString(),
       formationId: (j['formationId'] ?? '').toString(),
+      auteurId: j['auteurId'] as String?,
       auteurNom: (j['auteurNom'] ?? '').toString(),
       auteurRole: (j['auteurRole'] ?? 'Formateur').toString(),
       contenu: (j['contenu'] ?? '').toString(),

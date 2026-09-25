@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useSession, signOut } from "@/app/lib/auth-client";
 import { canAccessRoute } from "@/app/lib/permissions";
+import { EVENEMENT_SIGNALEMENTS, signalementsApi } from "@/app/lib/api";
 
 const navItems = [
   {
@@ -161,6 +162,16 @@ const navItems = [
         ),
       },
       {
+        href: "/dashboard/signalements",
+        label: "Signalements",
+        icon: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <line x1="4" y1="22" x2="4" y2="15" />
+          </svg>
+        ),
+      },
+      {
         href: "/dashboard/parametres",
         label: "Paramètres",
         icon: (
@@ -212,6 +223,26 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     return { ...group, items };
   }).filter((group) => group.items.length > 0);
 
+  // Pastille « signalements en attente » : rafraîchie à chaque changement de
+  // page, toutes les minutes et après une décision de modération.
+  const peutModerer = canAccessRoute(userRole, "/dashboard/signalements");
+  const [nbSignalements, setNbSignalements] = useState(0);
+  useEffect(() => {
+    if (!peutModerer) return;
+    const charger = () =>
+      signalementsApi
+        .compteur()
+        .then((r) => setNbSignalements(r.enAttente))
+        .catch(() => {});
+    charger();
+    const minuterie = setInterval(charger, 60_000);
+    window.addEventListener(EVENEMENT_SIGNALEMENTS, charger);
+    return () => {
+      clearInterval(minuterie);
+      window.removeEventListener(EVENEMENT_SIGNALEMENTS, charger);
+    };
+  }, [peutModerer, pathname]);
+
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
@@ -248,6 +279,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               >
                 {item.icon}
                 <span>{item.label}</span>
+                {item.href === "/dashboard/signalements" && nbSignalements > 0 && (
+                  <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-rose-600 text-white text-[11px] font-bold flex items-center justify-center">
+                    {nbSignalements > 99 ? "99+" : nbSignalements}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

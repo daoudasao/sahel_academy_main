@@ -7,6 +7,7 @@ import '../../../core/utils/format.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/classe_repository.dart';
 import '../../../models/classe_message.dart';
+import '../../../widgets/signaler_contenu.dart';
 import '../classe_message_detail_screen.dart';
 
 /// Carte d'un message du formateur ou élève, avec ses commentaires et un champ
@@ -45,11 +46,11 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
     if (texte.isEmpty) return;
     final auth = context.read<AuthRepository>();
     context.read<ClasseRepository>().ajouterCommentaire(
-          formationId: widget.message.formationId,
-          messageId: widget.message.id,
-          auteurNom: auth.utilisateur?.nom ?? 'Moi',
-          contenu: texte,
-        );
+      formationId: widget.message.formationId,
+      messageId: widget.message.id,
+      auteurNom: auth.utilisateur?.nom ?? 'Moi',
+      contenu: texte,
+    );
     _controller.clear();
     FocusScope.of(context).unfocus();
   }
@@ -73,9 +74,9 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
               Navigator.pop(ctx);
               try {
                 await context.read<ClasseRepository>().supprimerMessage(
-                      formationId: widget.message.formationId,
-                      messageId: widget.message.id,
-                    );
+                  formationId: widget.message.formationId,
+                  messageId: widget.message.id,
+                );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Annonce supprimée')),
@@ -83,9 +84,9 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erreur: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
                 }
               }
             },
@@ -102,12 +103,20 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
     final scheme = Theme.of(context).colorScheme;
     final authUser = context.watch<AuthRepository>().utilisateur;
     final classeRepo = context.watch<ClasseRepository>();
-    final estMonMessage = authUser != null &&
+    final estMonMessage =
+        authUser != null &&
         authUser.nom.trim().toLowerCase() ==
             message.auteurNom.trim().toLowerCase();
-    final peutSupprimer = classeRepo.estFormateurDe(message.formationId) ||
+    final peutSupprimer =
+        classeRepo.estFormateurDe(message.formationId) ||
         (authUser?.estFormateur == true) ||
         estMonMessage;
+    final signalable = peutSignaler(
+      context,
+      auteurId: message.auteurId,
+      auteurNom: message.auteurNom,
+      auteurRole: message.auteurRole,
+    );
     final moi = authUser?.nom ?? 'Moi';
 
     return Card(
@@ -129,27 +138,65 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                       Row(
                         children: [
                           Flexible(
-                            child: Text(message.auteurNom,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800)),
+                            child: Text(
+                              message.auteurNom,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 6),
                           _BadgeRole(role: message.auteurRole),
                         ],
                       ),
-                      Text(tempsEcoule(message.date),
-                          style:
-                              TextStyle(color: scheme.outline, fontSize: 12)),
+                      Text(
+                        tempsEcoule(message.date),
+                        style: TextStyle(color: scheme.outline, fontSize: 12),
+                      ),
                     ],
                   ),
                 ),
-                if (peutSupprimer)
-                  IconButton(
-                    icon: Icon(Icons.delete_outline_rounded,
-                        size: 20, color: scheme.outline),
-                    tooltip: 'Supprimer l\'annonce',
-                    onPressed: () => _confirmerSuppression(context),
+                if (peutSupprimer || signalable)
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert_rounded,
+                      size: 20,
+                      color: scheme.outline,
+                    ),
+                    tooltip: 'Options',
+                    onSelected: (choix) {
+                      if (choix == 'supprimer') {
+                        _confirmerSuppression(context);
+                      } else {
+                        signalerContenu(
+                          context,
+                          type: TypeContenuSignale.messageClasse,
+                          contenuId: message.id,
+                          auteurNom: message.auteurNom,
+                        );
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      if (peutSupprimer)
+                        const PopupMenuItem(
+                          value: 'supprimer',
+                          child: ListTile(
+                            leading: Icon(Icons.delete_outline_rounded),
+                            title: Text('Supprimer'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      if (signalable)
+                        const PopupMenuItem(
+                          value: 'signaler',
+                          child: ListTile(
+                            leading: Icon(Icons.flag_outlined),
+                            title: Text('Signaler'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                    ],
                   ),
               ],
             ),
@@ -172,8 +219,11 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: [
-                      Icon(Icons.chat_bubble_outline_rounded,
-                          size: 15, color: scheme.outline),
+                      Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 15,
+                        color: scheme.outline,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '0 réponse · Appuyez pour répondre',
@@ -194,7 +244,9 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 7),
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
                       color: scheme.primary.withValues(alpha: 0.08),
@@ -202,8 +254,11 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.forum_outlined,
-                            size: 16, color: scheme.primary),
+                        Icon(
+                          Icons.forum_outlined,
+                          size: 16,
+                          color: scheme.primary,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Voir les ${message.commentaires.length} réponses',
@@ -214,8 +269,11 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                           ),
                         ),
                         const Spacer(),
-                        Icon(Icons.arrow_forward_ios_rounded,
-                            size: 12, color: scheme.primary),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 12,
+                          color: scheme.primary,
+                        ),
                       ],
                     ),
                   ),
@@ -228,8 +286,11 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Row(
                       children: [
-                        Icon(Icons.chat_bubble_outline_rounded,
-                            size: 14, color: scheme.primary),
+                        Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 14,
+                          color: scheme.primary,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           '1 réponse dans la discussion',
@@ -240,8 +301,11 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                           ),
                         ),
                         const Spacer(),
-                        Icon(Icons.arrow_forward_ios_rounded,
-                            size: 11, color: scheme.primary),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 11,
+                          color: scheme.primary,
+                        ),
                       ],
                     ),
                   ),
@@ -270,7 +334,9 @@ class _MessageClasseCardState extends State<MessageClasseCard> {
                       isDense: true,
                       hintText: 'Ajouter une réponse…',
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide(color: scheme.outlineVariant),
@@ -304,47 +370,74 @@ class _CommentaireLigne extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Avatar(nom: commentaire.auteurNom, taille: 32),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(commentaire.auteurNom,
+    final signalable = peutSignaler(
+      context,
+      auteurId: commentaire.auteurId,
+      auteurNom: commentaire.auteurNom,
+      auteurRole: commentaire.auteurRole,
+    );
+    return GestureDetector(
+      // Appui long : signaler la réponse
+      onLongPress: signalable
+          ? () => signalerContenu(
+              context,
+              type: TypeContenuSignale.commentaireClasse,
+              contenuId: commentaire.id,
+              auteurNom: commentaire.auteurNom,
+            )
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Avatar(nom: commentaire.auteurNom, taille: 32),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            commentaire.auteurNom,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 13)),
-                      ),
-                      const SizedBox(width: 6),
-                      _BadgeRole(role: commentaire.auteurRole, petit: true),
-                      const SizedBox(width: 6),
-                      Text(tempsEcoule(commentaire.date),
-                          style:
-                              TextStyle(color: scheme.outline, fontSize: 11)),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(commentaire.contenu,
-                      style: const TextStyle(fontSize: 13.5, height: 1.35)),
-                ],
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        _BadgeRole(role: commentaire.auteurRole, petit: true),
+                        const SizedBox(width: 6),
+                        Text(
+                          tempsEcoule(commentaire.date),
+                          style: TextStyle(color: scheme.outline, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      commentaire.contenu,
+                      style: const TextStyle(fontSize: 13.5, height: 1.35),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -511,11 +604,13 @@ class _DocumentJointState extends State<_DocumentJoint> {
                     _enChargement
                         ? 'Téléchargement...'
                         : (_estEnLocal
-                            ? 'Fichier local · Appuie pour ouvrir'
-                            : 'Appuie pour télécharger et ouvrir'),
+                              ? 'Fichier local · Appuie pour ouvrir'
+                              : 'Appuie pour télécharger et ouvrir'),
                     style: TextStyle(
                       color: _enChargement || _estEnLocal
-                          ? (_estEnLocal ? const Color(0xFF059669) : scheme.primary)
+                          ? (_estEnLocal
+                                ? const Color(0xFF059669)
+                                : scheme.primary)
                           : scheme.outline,
                       fontSize: 11,
                       fontWeight: _enChargement || _estEnLocal

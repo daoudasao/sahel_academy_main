@@ -8,6 +8,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/classe_repository.dart';
 import '../../data/repositories/formation_repository.dart';
 import '../../models/classe_message.dart';
+import '../../widgets/signaler_contenu.dart';
 
 /// Écran de détail d'un message de classe (Google Classroom thread),
 /// affichant l'intégralité du message, toutes les réponses et une zone
@@ -42,9 +43,10 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
     // n'est pas forcément en mémoire : on recharge la classe.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      await context
-          .read<ClasseRepository>()
-          .chargerContenu(widget.formationId, forcer: true);
+      await context.read<ClasseRepository>().chargerContenu(
+        widget.formationId,
+        forcer: true,
+      );
       if (mounted) setState(() => _rechargement = false);
     });
   }
@@ -67,11 +69,11 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
     setState(() => _enEnvoi = true);
     try {
       await context.read<ClasseRepository>().ajouterCommentaire(
-            formationId: widget.formationId,
-            messageId: widget.messageId,
-            auteurNom: moi,
-            contenu: texte,
-          );
+        formationId: widget.formationId,
+        messageId: widget.messageId,
+        auteurNom: moi,
+        contenu: texte,
+      );
       _controller.clear();
 
       // Faire défiler jusqu'en bas pour voir la nouvelle réponse
@@ -85,9 +87,9 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de l\'envoi : $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur lors de l\'envoi : $e')));
       }
     } finally {
       if (mounted) setState(() => _enEnvoi = false);
@@ -113,9 +115,9 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
               Navigator.pop(ctx);
               try {
                 await context.read<ClasseRepository>().supprimerMessage(
-                      formationId: widget.formationId,
-                      messageId: widget.messageId,
-                    );
+                  formationId: widget.formationId,
+                  messageId: widget.messageId,
+                );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Message supprimé')),
@@ -124,9 +126,9 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erreur : $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
                 }
               }
             },
@@ -142,9 +144,9 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
     final scheme = Theme.of(context).colorScheme;
     final authUser = context.watch<AuthRepository>().utilisateur;
     final classeRepo = context.watch<ClasseRepository>();
-    final formation = context
-        .read<FormationRepository>()
-        .getFormationParId(widget.formationId);
+    final formation = context.read<FormationRepository>().getFormationParId(
+      widget.formationId,
+    );
 
     final messages = classeRepo.messages(widget.formationId);
     final messageIndex = messages.indexWhere((m) => m.id == widget.messageId);
@@ -181,20 +183,18 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
 
     if (messageIndex == -1) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Discussion'),
-        ),
-        body: const Center(
-          child: Text('Message introuvable ou supprimé.'),
-        ),
+        appBar: AppBar(title: const Text('Discussion')),
+        body: const Center(child: Text('Message introuvable ou supprimé.')),
       );
     }
 
     final message = messages[messageIndex];
-    final estMonMessage = authUser != null &&
+    final estMonMessage =
+        authUser != null &&
         authUser.nom.trim().toLowerCase() ==
             message.auteurNom.trim().toLowerCase();
-    final peutSupprimer = classeRepo.estFormateurDe(widget.formationId) ||
+    final peutSupprimer =
+        classeRepo.estFormateurDe(widget.formationId) ||
         (authUser?.estFormateur == true) ||
         estMonMessage;
 
@@ -223,6 +223,22 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
           ],
         ),
         actions: [
+          if (peutSignaler(
+            context,
+            auteurId: message.auteurId,
+            auteurNom: message.auteurNom,
+            auteurRole: message.auteurRole,
+          ))
+            IconButton(
+              icon: const Icon(Icons.flag_outlined),
+              tooltip: 'Signaler le message',
+              onPressed: () => signalerContenu(
+                context,
+                type: TypeContenuSignale.messageClasse,
+                contenuId: message.id,
+                auteurNom: message.auteurNom,
+              ),
+            ),
           if (peutSupprimer)
             IconButton(
               icon: const Icon(Icons.delete_outline_rounded),
@@ -240,21 +256,14 @@ class _ClasseMessageDetailScreenState extends State<ClasseMessageDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               children: [
                 // Carte du message d'origine
-                _CarteMessagePrincipal(
-                  message: message,
-                  scheme: scheme,
-                ),
+                _CarteMessagePrincipal(message: message, scheme: scheme),
 
                 const SizedBox(height: 16),
 
                 // En-tête de section des réponses
                 Row(
                   children: [
-                    Icon(
-                      Icons.forum_outlined,
-                      size: 18,
-                      color: scheme.primary,
-                    ),
+                    Icon(Icons.forum_outlined, size: 18, color: scheme.primary),
                     const SizedBox(width: 8),
                     Text(
                       'Réponses (${message.commentaires.length})',
@@ -375,10 +384,7 @@ class _CarteMessagePrincipal extends StatelessWidget {
   final ClasseMessage message;
   final ColorScheme scheme;
 
-  const _CarteMessagePrincipal({
-    required this.message,
-    required this.scheme,
-  });
+  const _CarteMessagePrincipal({required this.message, required this.scheme});
 
   @override
   Widget build(BuildContext context) {
@@ -387,9 +393,7 @@ class _CarteMessagePrincipal extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.6),
-        ),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,10 +436,7 @@ class _CarteMessagePrincipal extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       tempsEcoule(message.date),
-                      style: TextStyle(
-                        color: scheme.outline,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: scheme.outline, fontSize: 12),
                     ),
                   ],
                 ),
@@ -445,10 +446,7 @@ class _CarteMessagePrincipal extends StatelessWidget {
           const SizedBox(height: 14),
           SelectableText(
             message.contenu,
-            style: const TextStyle(
-              fontSize: 14.5,
-              height: 1.45,
-            ),
+            style: const TextStyle(fontSize: 14.5, height: 1.45),
           ),
           if (message.documentNom != null) ...[
             const SizedBox(height: 14),
@@ -465,13 +463,23 @@ class _ItemReponse extends StatelessWidget {
   final Commentaire commentaire;
   final ColorScheme scheme;
 
-  const _ItemReponse({
-    required this.commentaire,
-    required this.scheme,
-  });
+  const _ItemReponse({required this.commentaire, required this.scheme});
+
+  void _signaler(BuildContext context) => signalerContenu(
+    context,
+    type: TypeContenuSignale.commentaireClasse,
+    contenuId: commentaire.id,
+    auteurNom: commentaire.auteurNom,
+  );
 
   @override
   Widget build(BuildContext context) {
+    final signalable = peutSignaler(
+      context,
+      auteurId: commentaire.auteurId,
+      auteurNom: commentaire.auteurNom,
+      auteurRole: commentaire.auteurRole,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -491,49 +499,84 @@ class _ItemReponse extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: scheme.outlineVariant.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          commentaire.auteurNom,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                          ),
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onLongPress: signalable ? () => _signaler(context) : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest.withValues(
+                        alpha: 0.5,
                       ),
-                      const SizedBox(width: 6),
-                      _BadgeRoleAuteur(role: commentaire.auteurRole, petit: true),
-                      const SizedBox(width: 6),
-                      Text(
-                        tempsEcoule(commentaire.date),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: scheme.outlineVariant.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                commentaire.auteurNom,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            _BadgeRoleAuteur(
+                              role: commentaire.auteurRole,
+                              petit: true,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              tempsEcoule(commentaire.date),
+                              style: TextStyle(
+                                color: scheme.outline,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        SelectableText(
+                          commentaire.contenu,
+                          style: const TextStyle(fontSize: 13.5, height: 1.35),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (signalable)
+                  InkWell(
+                    onTap: () => _signaler(context),
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        left: 4,
+                        top: 4,
+                        bottom: 2,
+                      ),
+                      child: Text(
+                        'Signaler',
                         style: TextStyle(
                           color: scheme.outline,
-                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  SelectableText(
-                    commentaire.contenu,
-                    style: const TextStyle(fontSize: 13.5, height: 1.35),
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
         ],
@@ -574,10 +617,7 @@ class _BadgeRoleAuteur extends StatelessWidget {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: petit ? 6 : 8,
-        vertical: 1.5,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: petit ? 6 : 8, vertical: 1.5),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
@@ -684,13 +724,13 @@ class _DocumentJointElementState extends State<_DocumentJointElement> {
                     _enChargement
                         ? 'Téléchargement...'
                         : (_estEnLocal
-                            ? 'Fichier local · Appuyer pour ouvrir'
-                            : 'Appuyer pour télécharger et ouvrir'),
+                              ? 'Fichier local · Appuyer pour ouvrir'
+                              : 'Appuyer pour télécharger et ouvrir'),
                     style: TextStyle(
                       color: _enChargement || _estEnLocal
                           ? (_estEnLocal
-                              ? const Color(0xFF059669)
-                              : scheme.primary)
+                                ? const Color(0xFF059669)
+                                : scheme.primary)
                           : scheme.outline,
                       fontSize: 11,
                       fontWeight: _enChargement || _estEnLocal

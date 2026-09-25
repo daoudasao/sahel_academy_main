@@ -11,6 +11,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../models/classe_message.dart';
 import '../../models/post.dart';
 import '../../widgets/erreur_chargement.dart';
+import '../../widgets/signaler_contenu.dart';
 import '../../widgets/texte_avec_liens.dart';
 import 'widgets/actions_post.dart';
 import 'widgets/medias_post.dart';
@@ -570,6 +571,12 @@ class _LigneCommentaire extends StatelessWidget {
     final estStaff =
         commentaire.auteurRole == 'Admin' ||
         commentaire.auteurRole == 'Formateur';
+    final signalable = peutSignaler(
+      context,
+      auteurId: commentaire.auteurId,
+      auteurNom: commentaire.auteurNom,
+      auteurRole: commentaire.auteurRole,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -636,22 +643,49 @@ class _LigneCommentaire extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (onRepondre != null)
+                if (onRepondre != null || signalable)
                   Padding(
                     padding: const EdgeInsets.only(left: 4, top: 2),
-                    child: InkWell(
-                      onTap: onRepondre,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text(
-                          'Répondre',
-                          style: TextStyle(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12.5,
+                    child: Row(
+                      children: [
+                        if (onRepondre != null)
+                          InkWell(
+                            onTap: onRepondre,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Text(
+                                'Répondre',
+                                style: TextStyle(
+                                  color: scheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                        if (onRepondre != null && signalable)
+                          const SizedBox(width: 16),
+                        if (signalable)
+                          InkWell(
+                            onTap: () => signalerContenu(
+                              context,
+                              type: TypeContenuSignale.commentairePost,
+                              contenuId: commentaire.id,
+                              auteurNom: commentaire.auteurNom,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Text(
+                                'Signaler',
+                                style: TextStyle(
+                                  color: scheme.outline,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
               ],

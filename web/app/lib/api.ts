@@ -192,6 +192,52 @@ export const classesApi = {
   removeDocument: (id: string) => api.del(`/classes/documents/${id}`),
 };
 
+// ─── Modération : messages et commentaires signalés depuis l'app ───
+
+export type TypeSignalement = "message_classe" | "commentaire_classe" | "commentaire_post";
+export type MotifSignalement =
+  | "spam"
+  | "harcelement"
+  | "contenu_inapproprie"
+  | "discours_haineux"
+  | "fausse_information"
+  | "autre";
+export type StatutSignalement = "en_attente" | "traite" | "rejete";
+
+export interface Signalement {
+  id: string;
+  type: TypeSignalement;
+  contenuId: string;
+  motif: MotifSignalement;
+  details: string | null;
+  auteurId: string | null;
+  auteurNom: string;
+  auteurRole: string | null;
+  contenu: string;
+  formationId: string | null;
+  formationTitre: string | null;
+  postId: string | null;
+  statut: StatutSignalement;
+  traiteParNom: string | null;
+  traiteLe: string | null;
+  note: string | null;
+  createdAt: string;
+  contenuExiste: boolean;
+  nbSignalements: number;
+  signalePar: { id: string; nom: string; email: string; telephone: string | null };
+}
+
+/** Émis après une décision de modération, pour rafraîchir la pastille du menu. */
+export const EVENEMENT_SIGNALEMENTS = "signalements:maj";
+
+export const signalementsApi = {
+  list: (statut?: StatutSignalement) =>
+    api.get<Signalement[]>(`/signalements${statut ? `?statut=${statut}` : ""}`),
+  compteur: () => api.get<{ enAttente: number }>("/signalements/compteur"),
+  traiter: (id: string, data: { decision: "supprimer" | "rejeter"; note?: string }) =>
+    api.patch<Signalement>(`/signalements/${id}`, data),
+};
+
 export const rolesApi = {
   list: () => api.get<any[]>("/roles"),
   getPermissionsMatrix: () => api.get<any>("/roles/permissions"),

@@ -71,6 +71,15 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
     "COMMUNITY_MANAGER",
     "STAFF",
   ],
+  // Doit rester aligné sur ROLES_MODERATION (backend/src/signalements)
+  "/dashboard/signalements": [
+    "CHEF_CENTRE",
+    "SUPER_ADMIN",
+    "STAFF",
+    "RESPONSABLE_PEDAGOGIQUE",
+    "COMMUNITY_MANAGER",
+    "SUPPORT",
+  ],
   "/dashboard/parametres": ["CHEF_CENTRE", "SUPER_ADMIN", "STAFF"],
 };
 

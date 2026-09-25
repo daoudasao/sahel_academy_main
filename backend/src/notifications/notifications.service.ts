@@ -14,6 +14,9 @@ const CIBLES_FORMATION = ['formation', 'classe'];
  */
 export const CIBLE_DISCUSSION = 'discussion';
 
+/** Réponse de la modération à l'auteur d'un signalement (hors historique d'envoi). */
+export const CIBLE_MODERATION = 'moderation';
+
 /** Écran ouvert par défaut quand la notification n'a pas de destination propre. */
 const ROUTE_PAR_DEFAUT = '/notifications';
 
@@ -228,7 +231,7 @@ export class NotificationsService {
     return this.prisma.notification.findMany({
       // Les discussions de classe génèrent une notification par membre : ce
       // ne sont pas des envois de l'administration.
-      where: { cible: { not: CIBLE_DISCUSSION } },
+      where: { cible: { notIn: [CIBLE_DISCUSSION, CIBLE_MODERATION] } },
       orderBy: { createdAt: 'desc' },
       include: {
         user: {

@@ -178,7 +178,7 @@ export class ActualitesService {
   async addCommentaire(
     postId: string,
     dto: CreateCommentaireDto,
-    user: Parameters<typeof auteurDeCommentaire>[0],
+    user: Parameters<typeof auteurDeCommentaire>[0] & { id: string },
   ) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
@@ -200,6 +200,7 @@ export class ActualitesService {
     const comm = await this.prisma.commentaire.create({
       data: {
         postId,
+        auteurId: user.id,
         auteur,
         role,
         contenu: dto.contenu.trim(),

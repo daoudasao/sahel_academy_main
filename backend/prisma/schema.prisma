@@ -74,6 +74,30 @@ enum ExpediteurSupport {
   support
 }
 
+// Contenus qu'un utilisateur peut signaler à la modération.
+enum TypeSignalement {
+  message_classe
+  commentaire_classe
+  commentaire_post
+}
+
+enum MotifSignalement {
+  spam
+  harcelement
+  contenu_inapproprie
+  discours_haineux
+  fausse_information
+  autre
+}
+
+enum StatutSignalement {
+  en_attente
+  // Contenu retiré par la modération
+  traite
+  // Examiné : contenu conservé
+  rejete
+}
+
 // ─────────────────────────────────────────
 // AUTHENTIFICATION (Better Auth)
 // ─────────────────────────────────────────
@@ -108,6 +132,7 @@ model User {
   alertesVues         AlerteVue[]
   formateur           Formateur?       @relation("UserFormateur")
   supportMessages     SupportMessage[]
+  signalements        Signalement[]
 
   @@map("users")
 }
@@ -544,6 +569,9 @@ model Commentaire {
   id        String   @id @default(cuid())
   postId    String
   parentId  String?
+  // Compte de l'auteur (null pour les commentaires antérieurs) : sert à la
+  // modération.
+  auteurId  String?
   auteur    String
   role      String   @default("Élève")
   contenu   String   @db.Text
@@ -554,6 +582,42 @@ model Commentaire {
   reponses Commentaire[] @relation("Replies")
 
   @@map("commentaires")
+}
+
+// ─────────────────────────────────────────
+// MODÉRATION (signalements)
+// ─────────────────────────────────────────
+
+// Signalement d'un message ou commentaire par un utilisateur de l'app.
+// Le contenu et son auteur sont copiés au moment du signalement : la trace
+// reste lisible même une fois le contenu supprimé.
+model Signalement {
+  id           String            @id @default(cuid())
+  type         TypeSignalement
+  contenuId    String
+  motif        MotifSignalement
+  details      String?           @db.Text
+  signaleParId String
+  auteurId     String?
+  auteurNom    String
+  auteurRole   String?
+  contenu      String            @db.Text
+  // Contexte, pour situer le contenu depuis le dashboard
+  formationId  String?
+  postId       String?
+  statut       StatutSignalement @default(en_attente)
+  traiteParNom String?
+  traiteLe     DateTime?
+  note         String?           @db.Text
+  createdAt    DateTime          @default(now())
+
+  signalePar User @relation(fields: [signaleParId], references: [id], onDelete: Cascade)
+
+  // Un utilisateur ne signale qu'une fois le même contenu
+  @@unique([type, contenuId, signaleParId])
+  @@index([statut])
+  @@index([type, contenuId])
+  @@map("signalements")
 }
 
 // ─────────────────────────────────────────
