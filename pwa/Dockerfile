@@ -25,7 +25,7 @@ RUN flutter pub get
 COPY . .
 
 # Paramètres injectés au build (mêmes --dart-define qu'en production).
-ARG API_URL=https://sahel-academy-backend.onrender.com/api/v1
+ARG API_URL=https://app.sahel-academy.com/api/v1
 ARG WEB_PUSH_VAPID_KEY=
 ARG GOOGLE_WEB_CLIENT_ID=
 

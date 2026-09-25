@@ -7,13 +7,13 @@
 ///   - Émulateur Android : http://10.0.2.2:3001/api/v1  (10.0.2.2 = localhost de la machine hôte)
 ///   - Simulateur iOS / desktop / web : http://localhost:3001/api/v1
 ///   - Téléphone physique : `http://IP_LAN_DE_LA_MACHINE:3001/api/v1`
-///   - Production : `https://service-render/api/v1`
+///   - Production : `https://app.sahel-academy.com/api/v1` (valeur par défaut)
 class ApiConfig {
   const ApiConfig._();
 
   static const String baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'https://sahel-academy-backend.onrender.com/api/v1',
+    defaultValue: 'https://app.sahel-academy.com/api/v1',
   );
 
   /// Base des routes better-auth (montées sous /api/v1/auth côté backend).

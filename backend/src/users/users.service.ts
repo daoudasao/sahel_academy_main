@@ -108,6 +108,53 @@ export class UsersService {
     }
   }
 
+  /**
+   * Suppression de compte demandée par l'utilisateur lui-même (exigence
+   * Google Play). Le compte est anonymisé plutôt que supprimé : ses
+   * inscriptions, échéances et paiements restent pour la comptabilité du
+   * centre, mais plus rien ne permet de l'identifier ni de s'y reconnecter.
+   *
+   * Supprimés : sessions, identifiants (mot de passe, Google), candidatures,
+   * demandes d'inscription, messages au support, notifications personnelles.
+   * Anonymisés : profil, et nom affiché sur ses messages de classe.
+   */
+  async supprimerMonCompte(id: string) {
+    const anonyme = 'Compte supprimé';
+    await this.prisma.$transaction([
+      this.prisma.session.deleteMany({ where: { userId: id } }),
+      this.prisma.account.deleteMany({ where: { userId: id } }),
+      this.prisma.candidature.deleteMany({ where: { userId: id } }),
+      this.prisma.demandeInscription.deleteMany({ where: { userId: id } }),
+      this.prisma.supportMessage.deleteMany({ where: { userId: id } }),
+      this.prisma.notification.deleteMany({ where: { userId: id } }),
+      this.prisma.notificationEtat.deleteMany({ where: { userId: id } }),
+      this.prisma.alerteVue.deleteMany({ where: { userId: id } }),
+      this.prisma.classeMessage.updateMany({
+        where: { auteurId: id },
+        data: { auteurNom: anonyme },
+      }),
+      this.prisma.commentaireClasse.updateMany({
+        where: { auteurId: id },
+        data: { auteur: anonyme },
+      }),
+      this.prisma.user.update({
+        where: { id },
+        data: {
+          nom: anonyme,
+          // L'e-mail est unique : une adresse inerte propre au compte libère
+          // la vraie, qui pourra resservir à une nouvelle inscription.
+          email: `supprime-${id}@sahel-academy.invalid`,
+          telephone: null,
+          image: null,
+          fcmToken: null,
+          actif: false,
+        },
+      }),
+    ]);
+    this.logger.log(`Compte ${id} supprimé à la demande de son titulaire`);
+    return { supprime: true };
+  }
+
   async remove(id: string) {
     try {
       return await this.prisma.user.delete({

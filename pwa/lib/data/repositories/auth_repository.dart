@@ -438,6 +438,13 @@ class AuthRepository extends ChangeNotifier with SafeChangeNotifier {
     }
   }
 
+  /// Supprime définitivement le compte connecté (exigence Google Play), puis
+  /// déconnecte localement. Le serveur a déjà révoqué toutes les sessions.
+  Future<void> supprimerCompte() async {
+    await _api.delete('/users/me');
+    deconnexion();
+  }
+
   void deconnexion() {
     _utilisateur = null;
     notifyListeners();

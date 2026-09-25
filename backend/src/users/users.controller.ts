@@ -74,6 +74,21 @@ export class UsersController {
     return this.usersService.update(user.id, updateProfilDto);
   }
 
+  /**
+   * Suppression de son propre compte (exigence Google Play). Déclarée avant
+   * `DELETE :id` pour que « me » ne soit pas pris pour un identifiant.
+   * Les comptes de l'équipe passent par un super administrateur.
+   */
+  @Delete('me')
+  supprimerMonCompte(@CurrentUser() user: User) {
+    if (estEquipe(user)) {
+      throw new ForbiddenException(
+        "Un compte de l'équipe ne peut pas être supprimé depuis l'application. Contactez un super administrateur.",
+      );
+    }
+    return this.usersService.supprimerMonCompte(user.id);
+  }
+
   @SkipAudit()
   @Patch('fcm-token')
   updateFcmToken(

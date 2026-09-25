@@ -94,6 +94,56 @@ class _ParametresScreenState extends State<ParametresScreen> {
     );
   }
 
+  void _confirmerSuppressionCompte() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+        title: const Text('Supprimer votre compte ?'),
+        content: const Text(
+          'Cette action est définitive. Votre profil, vos candidatures, vos '
+          'messages au support et vos notifications seront effacés, et vous ne '
+          'pourrez plus vous connecter avec ce compte.\n\n'
+          'Les inscriptions et paiements déjà enregistrés sont conservés de '
+          'façon anonyme pour la comptabilité du centre.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                // La déconnexion qui suit ramène l'utilisateur à l'accueil.
+                await context.read<AuthRepository>().supprimerCompte();
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Votre compte a été supprimé.'),
+                    backgroundColor: AppColors.emerald,
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      e is ApiException ? e.message : 'Suppression impossible : $e',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Supprimer définitivement'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _afficherModalLegal(BuildContext context, {required String titre, required String contentText}) {
     showModalBottomSheet<void>(
       context: context,
@@ -193,6 +243,19 @@ class _ParametresScreenState extends State<ParametresScreen> {
           const Divider(height: 24),
 
           // ---- Section À propos ----
+          _enTeteSection(context, 'Mon compte'),
+          ListTile(
+            leading: _iconContainer(Icons.delete_forever_outlined, Colors.red),
+            title: const Text(
+              'Supprimer mon compte',
+              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red),
+            ),
+            subtitle: const Text('Effacer définitivement votre compte et vos données'),
+            onTap: _confirmerSuppressionCompte,
+          ),
+
+          const Divider(height: 24),
+
           _enTeteSection(context, 'À propos'),
           const ListTile(
             leading: Icon(Icons.info_outline),
