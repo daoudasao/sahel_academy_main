@@ -2,6 +2,12 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Ajoutées par open_filex mais inutiles : les documents sont enregistrés
+         dans le dossier privé de l'app et ouverts via FileProvider. Google Play
+         refuse READ_MEDIA_IMAGES / VIDEO sans usage essentiel déclaré. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove"/>
 
     <application
         android:label="Sahel Academy"

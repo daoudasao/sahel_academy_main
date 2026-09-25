@@ -39,6 +39,16 @@ export default function ConfidentialitePage() {
             classes, et vos commentaires sur le fil d&apos;actualité.
           </li>
           <li>
+            <strong>Messages vocaux</strong> : si vous envoyez un message vocal au
+            support, l&apos;application utilise le micro uniquement pendant
+            l&apos;enregistrement, avec votre autorisation.
+          </li>
+          <li>
+            <strong>Photos et documents</strong> : la photo de profil et les
+            documents que vous choisissez d&apos;envoyer. L&apos;application
+            n&apos;accède pas au reste de votre galerie.
+          </li>
+          <li>
             <strong>Notifications</strong> : un identifiant technique de
             l&apos;appareil (jeton Firebase Cloud Messaging) pour vous envoyer
             des notifications.
