@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart'
+    show GoogleSignInException, GoogleSignInExceptionCode;
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_config.dart';
@@ -292,6 +294,18 @@ class AuthRepository extends ChangeNotifier with SafeChangeNotifier {
     String? idToken;
     try {
       idToken = await google.connexion();
+    } on GoogleSignInException catch (e) {
+      debugPrint('Connexion Google échouée: $e');
+      // Le détail renvoyé par Google permet de distinguer une vraie annulation
+      // d'une app non reconnue (voir GoogleAuthService.connexion).
+      final detail = (e.description ?? '').trim();
+      final suffixe = detail.isEmpty ? '' : ' ($detail)';
+      throw ApiException(
+        401,
+        e.code == GoogleSignInExceptionCode.canceled
+            ? 'Connexion Google annulée$suffixe.'
+            : 'Connexion Google impossible$suffixe. Réessayez.',
+      );
     } catch (e) {
       debugPrint('Connexion Google échouée: $e');
       throw const ApiException(401, 'Connexion Google impossible. Réessayez.');

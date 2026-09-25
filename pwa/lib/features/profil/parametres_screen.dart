@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/config/app_version.dart';
@@ -293,28 +294,13 @@ Sahel Academy se réserve le droit d'adapter ou modifier la présente plateforme
             leading: const Icon(Icons.privacy_tip_outlined),
             title: const Text('Politique de confidentialité', style: TextStyle(fontWeight: FontWeight.w700)),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              _afficherModalLegal(
-                context,
-                titre: 'Politique de confidentialité',
-                contentText: '''
-1. COLLECTE DES DONNÉES PERSONNELLES
-Nous collectons les données nécessaires au bon fonctionnement de vos formations : nom, adresse e-mail, numéro de téléphone, et historique d'apprentissage.
-
-2. UTILISATION DES DONNÉES
-Vos données personnelles sont utilisées pour :
-- Personnaliser votre parcours de formation.
-- Vous transmettre les alertes de cours et résultats de bourses.
-- Assurer le suivi administratif et financier de vos inscriptions.
-
-3. SÉCURITÉ DES DONNÉES
-Sahel Academy met en œuvre des mesures de sécurité techniques avancées pour protéger vos informations contre tout accès non autorisé.
-
-4. VOS DROITS
-Conformément à la réglementation sur la protection des données, vous disposez d'un droit d'accès, de rectification et de suppression de vos données personnelles depuis votre espace profil ou sur simple demande au support.
-''',
-              );
-            },
+            subtitle: const Text('sahel-academy.com/confidentialite'),
+            // Google Play exige un lien vers la politique publiée en ligne,
+            // la même que celle déclarée sur la fiche du Store.
+            onTap: () => launchUrl(
+              Uri.parse('https://sahel-academy.com/confidentialite'),
+              mode: LaunchMode.externalApplication,
+            ),
           ),
           const SizedBox(height: 30),
         ],

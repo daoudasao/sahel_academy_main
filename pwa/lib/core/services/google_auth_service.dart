@@ -66,21 +66,20 @@ class GoogleAuthService {
 
   /// Ouvre la feuille de connexion native et renvoie l'`id_token` Google.
   ///
-  /// Android / iOS uniquement. Renvoie `null` si l'utilisateur annule.
+  /// Android / iOS uniquement. Lève [GoogleSignInException] en cas d'échec,
+  /// y compris `canceled` : sur Android, Google renvoie aussi « annulé »
+  /// quand l'app n'est pas reconnue (client OAuth Android ou SHA-1 manquant,
+  /// écran de consentement en mode test). L'ignorer laissait l'utilisateur
+  /// bloqué sur l'écran de connexion sans explication.
   Future<String?> connexion() async {
     if (!supporteConnexionDirecte) {
       throw StateError(
         'Sur cette plateforme, la connexion Google passe par une redirection.',
       );
     }
-    try {
-      final GoogleSignInAccount compte = await GoogleSignIn.instance
-          .authenticate();
-      return compte.authentication.idToken;
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) return null;
-      rethrow;
-    }
+    final GoogleSignInAccount compte = await GoogleSignIn.instance
+        .authenticate();
+    return compte.authentication.idToken;
   }
 
   /// Oublie le compte Google côté SDK (appelé à la déconnexion de l'app).
