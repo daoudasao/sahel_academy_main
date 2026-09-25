@@ -17,6 +17,7 @@ import 'data/repositories/paiement_repository.dart';
 import 'data/repositories/support_repository.dart';
 
 import 'core/services/fcm_service.dart';
+import 'core/services/mise_a_jour_service.dart';
 
 /// L'application Sahel Academy.
 ///
@@ -43,6 +44,11 @@ class _SahelAcademyAppState extends State<SahelAcademyApp> {
     super.initState();
     FcmService.instance.attachRouter(_router);
     _auth.addListener(_afficherErreurGoogle);
+    // Après la première image : la feuille Google de mise à jour et le
+    // bandeau « Redémarrer » ont besoin d'un écran affiché.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => MiseAJourService.instance.verifier(_messengerKey),
+    );
   }
 
   /// Une connexion Google web échoue *pendant* le retour de redirection :

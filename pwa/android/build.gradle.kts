@@ -19,17 +19,21 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// ─── file_picker 11 + AGP 9 ───
-// Sous AGP 9, file_picker n'applique plus le plugin Kotlin (il compte sur le
-// Kotlin intégré d'AGP), or ce projet garde `android.builtInKotlin=false` :
-// ses sources Kotlin ne seraient pas compilées (FilePickerPlugin introuvable
-// au build release). On lui applique donc le plugin Kotlin nous-mêmes.
+// ─── Plugins passés au Kotlin intégré d'AGP 9 ───
+// Ces plugins n'appliquent plus le plugin Kotlin (ils comptent sur le Kotlin
+// intégré d'AGP), or ce projet garde `android.builtInKotlin=false` : leurs
+// sources Kotlin ne seraient pas compilées (classe du plugin introuvable au
+// build release). On leur applique donc le plugin Kotlin nous-mêmes.
+// file_picker compile en Java 17 ; in_app_update règle lui-même sa cible (1.8).
+val pluginsSansKotlin = setOf("file_picker", "in_app_update")
 subprojects {
-    if (name == "file_picker") {
+    if (name in pluginsSansKotlin) {
         pluginManager.withPlugin("com.android.library") {
             apply(plugin = "org.jetbrains.kotlin.android")
-            tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-                compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            if (name == "file_picker") {
+                tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+                    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+                }
             }
         }
     }
