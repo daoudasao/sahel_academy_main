@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart'
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_config.dart';
+import '../../core/services/app_install_service.dart';
 import '../../core/services/fcm_service.dart';
 import '../../core/services/google_auth_service.dart';
 import '../../core/services/oauth_web_bridge.dart';
@@ -205,6 +206,8 @@ class AuthRepository extends ChangeNotifier with SafeChangeNotifier {
       );
       _api.setCachedUserJson(jsonEncode(_utilisateur!.toJson()));
       FcmService.instance.initialize();
+      // Signaler l'appareil courant au backend (installation / utilisation)
+      AppInstallService.instance.ping();
     } else {
       _utilisateur = null;
       _api.clearCachedUserJson();
@@ -466,5 +469,6 @@ class AuthRepository extends ChangeNotifier with SafeChangeNotifier {
     _api.post('/auth/sign-out').catchError((_) => null);
     _api.clearToken();
     GoogleAuthService.instance.deconnexion();
+    AppInstallService.instance.reset();
   }
 }

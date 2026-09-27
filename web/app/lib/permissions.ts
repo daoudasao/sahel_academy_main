@@ -80,6 +80,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
     "COMMUNITY_MANAGER",
     "SUPPORT",
   ],
+  "/dashboard/installations": ["CHEF_CENTRE", "SUPER_ADMIN", "STAFF"],
   "/dashboard/parametres": ["CHEF_CENTRE", "SUPER_ADMIN", "STAFF"],
 };
 

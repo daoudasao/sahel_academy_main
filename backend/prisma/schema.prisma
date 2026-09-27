@@ -133,6 +133,7 @@ model User {
   formateur           Formateur?       @relation("UserFormateur")
   supportMessages     SupportMessage[]
   signalements        Signalement[]
+  appInstalls         AppInstall[]
 
   @@map("users")
 }
@@ -679,6 +680,38 @@ model AlerteVue {
   @@unique([userId, alerteId])
   @@index([userId])
   @@map("alertes_vues")
+}
+
+// ─────────────────────────────────────────
+// INSTALLATIONS / UTILISATIONS DE L'APP
+// ─────────────────────────────────────────
+
+// Chaque appareil unique utilisé par un utilisateur pour accéder à l'app.
+// Permet de compter les installations (PWA / native) et les navigateurs actifs.
+model AppInstall {
+  id              String   @id @default(cuid())
+  userId          String
+  // Identifiant opaque de l'appareil (hash côté client) pour dédoublonner
+  deviceFingerprint String
+  // "android" | "ios" | "web" | "linux" | "macos" | "windows"
+  plateforme      String
+  // "pwa" | "native" | "navigateur"
+  typeInstallation String
+  // Version de l'app (ex: "1.2.0"), null si navigateur web
+  appVersion      String?
+  // Modèle/nom de l'appareil (ex: "Samsung Galaxy A54", "Chrome 128")
+  deviceModel     String?
+  // Dernière activité détectée
+  dernierAcces    DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceFingerprint])
+  @@index([plateforme])
+  @@index([typeInstallation])
+  @@index([dernierAcces])
+  @@map("app_installs")
 }
 
 // Journal d'audit : trace des actions de l'équipe (création, modification,

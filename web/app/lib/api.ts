@@ -312,4 +312,56 @@ export const auditApi = {
     ),
 };
 
+// ─── Installations & Utilisations de l'app ───
 
+export interface AppInstallStats {
+  total: number;
+  utilisateursUniques: number;
+  actifs24h: number;
+  actifs7j: number;
+  actifs30j: number;
+  parPlateforme: { plateforme: string; nombre: number }[];
+  parType: { type: string; nombre: number }[];
+}
+
+export interface AppInstall {
+  id: string;
+  userId: string;
+  deviceFingerprint: string;
+  plateforme: string;
+  typeInstallation: string;
+  appVersion: string | null;
+  deviceModel: string | null;
+  dernierAcces: string;
+  createdAt: string;
+  user: {
+    id: string;
+    nom: string;
+    email: string;
+    image: string | null;
+  };
+}
+
+export const appInstallsApi = {
+  stats: () => api.get<AppInstallStats>("/app-installs/stats"),
+  list: (params?: {
+    plateforme?: string;
+    typeInstallation?: string;
+    page?: number;
+    limite?: number;
+  }) => {
+    const q = new URLSearchParams();
+    if (params?.plateforme) q.set("plateforme", params.plateforme);
+    if (params?.typeInstallation) q.set("typeInstallation", params.typeInstallation);
+    if (params?.page) q.set("page", String(params.page));
+    if (params?.limite) q.set("limite", String(params.limite));
+    const qs = q.toString();
+    return api.get<{
+      items: AppInstall[];
+      total: number;
+      page: number;
+      limite: number;
+      pages: number;
+    }>(`/app-installs${qs ? `?${qs}` : ""}`);
+  },
+};

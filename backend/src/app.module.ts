@@ -23,6 +23,7 @@ import { EspaceFormateurModule } from './espace-formateur/espace-formateur.modul
 import { FirebaseModule } from './firebase/firebase.module';
 import { AuditModule } from './audit/audit.module';
 import { SignalementsModule } from './signalements/signalements.module';
+import { AppInstallsModule } from './app-installs/app-installs.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { SignalementsModule } from './signalements/signalements.module';
     EspaceFormateurModule,
     FirebaseModule,
     SignalementsModule,
+    AppInstallsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -84,6 +84,7 @@ async function bootstrap() {
       .addTag('classes', 'Classes (messages & documents)')
       .addTag('support', 'Chat support')
       .addTag('upload', 'Upload Fichiers (Bunny.net)')
+      .addTag('app-installs', 'Installations & Utilisations de l\'app')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
