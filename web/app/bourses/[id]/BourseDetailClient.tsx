@@ -149,7 +149,7 @@ export default function BourseDetailClient({ bourse }: BourseDetailClientProps) 
           {/* Section Body */}
           <div className="p-6 sm:p-8 space-y-6">
             {bourse.statut === "fermee" ? (
-              <div className="p-8 rounded-3xl bg-amber-50/80 border border-amber-200 text-center space-y-4">
+              <div className="p-8 rounded-3xl bg-amber-50/80 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800/60 text-center space-y-4">
                 <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto shadow-inner">
                   <Clock className="w-7 h-7" />
                 </div>
@@ -260,7 +260,7 @@ export default function BourseDetailClient({ bourse }: BourseDetailClientProps) 
                               const href = rawUrl && (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) ? rawUrl : rawUrl ? `https://${rawUrl}` : "#";
 
                               return (
-                                <div key={champ.id} className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-teal-50/40 to-slate-50 border border-emerald-200/80 shadow-sm space-y-2.5">
+                                <div key={champ.id} className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-teal-50/40 to-slate-50 border border-emerald-200/80 dark:from-emerald-950/50 dark:via-teal-950/30 dark:to-slate-900/40 dark:border-emerald-800/60 shadow-sm space-y-2.5">
                                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                     <div className="space-y-1">
                                       <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">

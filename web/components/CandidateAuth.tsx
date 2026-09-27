@@ -261,7 +261,7 @@ interface CandidateBadgeProps {
 /** Bandeau « connecté en tant que … » avec bouton de déconnexion. */
 export function CandidateBadge({ user, onLogout }: CandidateBadgeProps) {
   return (
-    <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80">
+    <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 dark:bg-emerald-950/40 dark:border-emerald-800/60">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
           {user.nom ? user.nom.charAt(0).toUpperCase() : "U"}
