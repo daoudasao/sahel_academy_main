@@ -139,7 +139,7 @@ export default function AppDownloadModal({
 
         {/* Invitation Content */}
         <div className="p-6 sm:p-8 space-y-6">
-          <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-5 text-left space-y-3">
+          <div className="bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl p-5 text-left space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#0a2d26] text-emerald-400 flex items-center justify-center shrink-0 shadow-sm">
                 <Smartphone className="w-5 h-5" />
@@ -154,7 +154,7 @@ export default function AppDownloadModal({
               </div>
             </div>
 
-            <ul className="text-xs text-slate-700 space-y-2 pt-2 border-t border-emerald-100/80">
+            <ul className="text-xs text-slate-700 space-y-2 pt-2 border-t border-emerald-100/80 dark:border-emerald-800/50">
               {contenu.puces.map((puce) => (
                 <li key={puce} className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
