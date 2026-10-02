@@ -110,6 +110,28 @@
 
     #sa-gate .sa-hint { margin-top: 16px; font-size: 12px; color: rgba(255,255,255,.42); }
     #sa-gate .sa-hidden { display: none !important; }
+    #sa-gate .sa-btn-play { display: flex !important; align-items: center; justify-content: center; gap: 10px; }
+    #sa-gate .sa-btn-play svg { width: 22px; height: 22px; flex: 0 0 auto; }
+
+    /* Bandeau « l'app est sur Google Play » dans la PWA déjà installée (Android) */
+    #sa-play-banner {
+      position: fixed; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top));
+      z-index: 10002; display: flex; align-items: center; gap: 12px;
+      padding: 12px 12px 12px 14px; border-radius: 16px; box-sizing: border-box;
+      background: #0F3B32; border: 1px solid rgba(234,179,8,.45); color: #fff;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 13px; line-height: 1.4;
+    }
+    #sa-play-banner .sa-txt { flex: 1; }
+    #sa-play-banner strong { color: #EAB308; }
+    #sa-play-banner a {
+      flex: 0 0 auto; background: #EAB308; color: #0A2D26; font-weight: 800;
+      text-decoration: none; padding: 9px 14px; border-radius: 12px;
+    }
+    #sa-play-banner button {
+      flex: 0 0 auto; background: none; border: 0; color: rgba(255,255,255,.6);
+      font-size: 20px; line-height: 1; padding: 4px; cursor: pointer;
+    }
     #sa-toast {
       position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
       background: #EAB308; color: #0A2D26; font-weight: 800; font-size: 14px;
@@ -146,6 +168,7 @@
         <div class="sa-warn">
           <p>⚠️ Tu es dans le navigateur d'une autre app (WhatsApp, Instagram…). L'installation n'est pas possible ici.<br><br>Ouvre ce lien dans <strong>Chrome</strong> (Android) ou <strong>Safari</strong> (iPhone).</p>
         </div>
+        <div id="sa-inapp-play" class="sa-hidden"><a class="sa-btn sa-btn-primary sa-btn-play sa-play-link" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#0A2D26" d="M3.6 1.8 13.8 12 3.6 22.2c-.4-.2-.6-.6-.6-1.1V2.9c0-.5.2-.9.6-1.1Zm13.6 6.8-3.4 3.4 3.4 3.4 3.9-2.2c.8-.5.8-1.7 0-2.2l-3.9-2.4ZM13.8 12 3.6 22.2c.3.2.8.2 1.2 0l12.4-6.8-3.4-3.4Zm-10.2-10.2L13.8 12l3.4-3.4L4.8 1.8c-.4-.2-.9-.2-1.2 0Z"/></svg>Télécharger sur Google Play</a></div>
         <a id="sa-inapp-chrome" class="sa-btn sa-btn-primary sa-hidden">🌐 Ouvrir dans Chrome</a>
         <button id="sa-inapp-copy" class="sa-btn-secondary">📋 Copier le lien</button>
         <div class="sa-steps">
@@ -157,26 +180,16 @@
         </div>
       </div>
 
-      <!-- B) Android + Chrome : invite native -->
-      <div id="sa-block-android-chrome" class="sa-hidden">
-        <button id="sa-install-btn" class="sa-btn-primary sa-hidden">📲 Installer l'application</button>
-        <div id="sa-android-manual" class="sa-steps sa-hidden">
-          <h2>Installer l'application</h2>
+      <!-- B) Android : l'application native, sur Google Play -->
+      <div id="sa-block-android" class="sa-hidden">
+        <a class="sa-btn sa-btn-primary sa-btn-play sa-play-link" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#0A2D26" d="M3.6 1.8 13.8 12 3.6 22.2c-.4-.2-.6-.6-.6-1.1V2.9c0-.5.2-.9.6-1.1Zm13.6 6.8-3.4 3.4 3.4 3.4 3.9-2.2c.8-.5.8-1.7 0-2.2l-3.9-2.4ZM13.8 12 3.6 22.2c.3.2.8.2 1.2 0l12.4-6.8-3.4-3.4Zm-10.2-10.2L13.8 12l3.4-3.4L4.8 1.8c-.4-.2-.9-.2-1.2 0Z"/></svg>Télécharger sur Google Play</a>
+        <div class="sa-steps">
+          <h2>Sur Android</h2>
           <ol>
-            <li>Ouvre le menu <strong>⋮</strong> de Chrome (en haut à droite).</li>
-            <li>Choisis <strong>« Installer l'application »</strong>.</li>
-            <li>Ouvre-la ensuite depuis ton tiroir d'applications.</li>
+            <li>Installe <strong>Sahel Academy</strong> depuis Google Play.</li>
+            <li>Ouvre l'application et connecte-toi avec ton compte habituel.</li>
           </ol>
         </div>
-      </div>
-
-      <!-- C) Android autre navigateur (Samsung Internet, etc.) -->
-      <div id="sa-block-android-other" class="sa-hidden">
-        <div class="sa-warn">
-          <p>Pour une installation fiable (vraie app dans le tiroir, sans logo navigateur), ouvre ce lien dans <strong>Google Chrome</strong>.</p>
-        </div>
-        <a id="sa-other-chrome" class="sa-btn sa-btn-primary">🌐 Ouvrir dans Chrome</a>
-        <button id="sa-other-copy" class="sa-btn-secondary">📋 Copier le lien</button>
       </div>
 
       <!-- D) iOS (Safari, Chrome, Edge…) : ajout via le bouton Partager -->
@@ -219,6 +232,8 @@
   <script>
     (function () {
       var ua = window.navigator.userAgent || '';
+      // Application Android publiée sur Google Play : remplace la PWA sur Android.
+      var PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.sahelacademy.app';
 
       // Envoi sécurisé d'un événement GA4 (ignoré si gtag bloqué/absent).
       function track(name, params) {
@@ -249,6 +264,33 @@
           || window.matchMedia('(display-mode: minimal-ui)').matches
           || window.navigator.standalone === true
           || document.referrer.startsWith('android-app://');
+      }
+
+      // PWA déjà installée sur Android : on invite à passer à l'app Google Play.
+      // Refermable ; reproposé au plus une fois par semaine.
+      function proposerPlayStore() {
+        if (!/android/i.test(ua)) return;
+        var CLE = 'sa_play_banner_ferme';
+        try {
+          var ferme = parseInt(localStorage.getItem(CLE) || '0', 10);
+          if (Date.now() - ferme < 7 * 24 * 3600 * 1000) return;
+        } catch (e) {}
+        var b = document.createElement('div');
+        b.id = 'sa-play-banner';
+        b.innerHTML = '<span class="sa-txt">Sahel Academy est maintenant sur <strong>Google Play</strong> : plus rapide et plus fiable.</span>'
+          + '<a target="_blank" rel="noopener">Installer</a>'
+          + '<button type="button" aria-label="Fermer">×</button>';
+        var lien = b.querySelector('a');
+        lien.href = PLAY_STORE_URL;
+        lien.addEventListener('click', function () { track('play_store_click', { from: 'pwa_banner' }); });
+        b.querySelector('button').addEventListener('click', function () {
+          try { localStorage.setItem(CLE, String(Date.now())); } catch (e) {}
+          b.remove();
+        });
+        // Après le premier rendu de Flutter, pour passer au-dessus de son canevas.
+        window.addEventListener('flutter-first-frame', function () {
+          setTimeout(function () { document.body.appendChild(b); }, 1500);
+        });
       }
 
       function bootFlutter() {
@@ -368,6 +410,11 @@
 
         var env = detect();
 
+        document.querySelectorAll('.sa-play-link').forEach(function (a) {
+          a.href = PLAY_STORE_URL;
+          a.addEventListener('click', function () { track('play_store_click', { from: 'gate' }); });
+        });
+
         // Vue du portail d'installation, segmentée par plateforme.
         track('install_gate_view', {
           platform: env.inApp ? 'in_app' : (env.isIOS ? 'ios' : (env.isAndroid ? 'android' : 'desktop')),
@@ -394,9 +441,13 @@
         if (env.inApp) {
           show('sa-block-inapp');
           if (env.isAndroid) {
-            var a = document.getElementById('sa-inapp-chrome');
-            a.href = chromeIntentUrl();
-            a.classList.remove('sa-hidden');
+            // Le lien Google Play s'ouvre dans l'app Play Store, même depuis
+            // le navigateur de WhatsApp : pas besoin de passer par Chrome.
+            show('sa-inapp-play');
+            document.querySelector('#sa-block-inapp .sa-warn p').innerHTML =
+              "⚠️ Tu es dans le navigateur d'une autre app (WhatsApp, Instagram…).<br><br>Télécharge l'application Sahel Academy sur <strong>Google Play</strong>.";
+            document.querySelector('#sa-block-inapp .sa-steps').classList.add('sa-hidden');
+            document.getElementById('sa-inapp-copy').classList.add('sa-hidden');
           }
           return;
         }
@@ -409,13 +460,7 @@
         }
 
         if (env.isAndroid) {
-          if (env.isChromeAndroid) {
-            show('sa-block-android-chrome');
-            wireInstallPrompt('sa-install-btn', 'sa-android-manual');
-          } else {
-            show('sa-block-android-other');
-            document.getElementById('sa-other-chrome').href = chromeIntentUrl();
-          }
+          show('sa-block-android');
           return;
         }
 
@@ -456,7 +501,10 @@
         });
       })();
 
-      if (isStandalone() || isRetourOAuth() || isDevLocal()) { bootFlutter(); }
+      if (isStandalone() || isRetourOAuth() || isDevLocal()) {
+        if (isStandalone()) proposerPlayStore();
+        bootFlutter();
+      }
       else { showGate(); }
     })();
   </script>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Bourse, Formation, fetchBourses, fetchFormations } from "@/lib/api";
+import { PLAY_STORE_URL } from "@/lib/app-mobile";
 import { GraduationCap, Calendar, ArrowRight, Sparkles, Smartphone, RefreshCw, BookOpen, Clock, Wallet, ClipboardList } from "lucide-react";
 
 interface HomePageClientProps {
@@ -295,15 +296,21 @@ export default function HomePageClient({
         </Link>
 
         {/* Footer info banner */}
-        <div className="p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-white/20 dark:border-slate-800 shadow-lg flex items-center gap-3">
+        <a
+          href={PLAY_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-white/20 dark:border-slate-800 shadow-lg flex items-center gap-3 hover:bg-white dark:hover:bg-slate-900 transition-colors"
+        >
           <Smartphone className="w-6 h-6 text-emerald-800 dark:text-emerald-400 shrink-0" />
-          <div className="text-xs text-slate-800 dark:text-slate-200">
+          <div className="text-xs text-slate-800 dark:text-slate-200 flex-1">
             <span className="font-bold text-emerald-950 dark:text-emerald-300">Application mobile Sahel Academy : </span>
             <span className="text-slate-700 dark:text-slate-300">
-              Téléchargez l&apos;application pour suivre vos résultats et accéder à tous vos cours en direct.
+              Téléchargez l&apos;application sur Google Play pour suivre vos résultats et accéder à tous vos cours en direct.
             </span>
           </div>
-        </div>
+          <ArrowRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-transform shrink-0" />
+        </a>
 
         <p className="text-center text-xs text-emerald-100/90 drop-shadow-sm font-medium">© {new Date().getFullYear()} Sahel Academy. Tous droits réservés.</p>
       </div>
