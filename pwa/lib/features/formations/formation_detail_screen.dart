@@ -161,7 +161,7 @@ class _FormationDetailScreenState extends State<FormationDetailScreen> {
                                 icon: const Icon(Icons.share_outlined, color: Colors.white),
                                 tooltip: 'Partager cette formation',
                                 onPressed: () {
-                                  final url = 'https://sahel-academy-verif.vercel.app/app/formation/${formation.id}';
+                                  final url = 'https://sahel-academy.com/app/formation/${formation.id}';
                                   final text = 'Découvrez la formation "${formation.titre}" sur Sahel Academy :\n\n👉 $url';
                                   // ignore: deprecated_member_use
                                   Share.share(text, subject: formation.titre);

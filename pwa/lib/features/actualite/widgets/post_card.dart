@@ -43,7 +43,7 @@ class _PostCardState extends State<PostCard> {
   void _ouvrirDetail() => context.push('/post/${widget.post.id}');
 
   void _partagerPost() {
-    final postUrl = 'https://sahel-academy-verif.vercel.app/app/post/${widget.post.id}';
+    final postUrl = 'https://sahel-academy.com/app/post/${widget.post.id}';
     final text = '${widget.post.auteurNom} sur Sahel Academy :\n\n${widget.post.contenu}\n\n👉 $postUrl';
     // ignore: deprecated_member_use
     Share.share(text, subject: 'Publication de ${widget.post.auteurNom}');

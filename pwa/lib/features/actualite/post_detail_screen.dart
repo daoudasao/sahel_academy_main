@@ -215,7 +215,7 @@ class _PostContenu extends StatelessWidget {
               tooltip: 'Partager',
               onPressed: () {
                 final postUrl =
-                    'https://sahel-academy-verif.vercel.app/app/post/${post.id}';
+                    'https://sahel-academy.com/app/post/${post.id}';
                 final text =
                     '${post.auteurNom} sur Sahel Academy :\n\n${post.contenu}\n\n👉 $postUrl';
                 // ignore: deprecated_member_use

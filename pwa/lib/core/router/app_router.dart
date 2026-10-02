@@ -75,7 +75,7 @@ String? _redirigerSelonRole(bool estFormateur, String location) {
 /// Exemple :
 /// - `sahelacademy://post/123` -> `/post/123`
 /// - `sahelacademy://formation/abc` -> `/formation/abc`
-/// - `https://sahel-academy-verif.vercel.app/app/post/123` -> `/post/123`
+/// - `https://sahel-academy.com/app/post/123` -> `/post/123`
 String _normalizeDeepLinkPath(Uri uri) {
   if (uri.hasScheme && uri.scheme != 'http' && uri.scheme != 'https') {
     final host = uri.host;

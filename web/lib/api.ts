@@ -69,6 +69,31 @@ export async function fetchBourseById(id: string): Promise<Bourse | null> {
   }
 }
 
+export interface Publication {
+  id: string;
+  auteurNom: string;
+  role: string;
+  contenu: string;
+  documentNom?: string | null;
+  likes: number;
+  createdAt: string;
+  medias: { id: string; type: "photo" | "video" | "audio"; url: string; nom?: string | null }[];
+}
+
+/** Publication du fil d'actualité (lecture publique). */
+export async function fetchPublicationById(id: string): Promise<Publication | null> {
+  try {
+    const res = await fetch(`${API_URL}/actualites/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error("fetchPublicationById error:", err);
+    return null;
+  }
+}
+
 export async function signInCandidate(email: string, password: string): Promise<{ user: CandidateUser; token?: string }> {
   const res = await fetch(`${API_URL}/auth/sign-in/email`, {
     method: "POST",

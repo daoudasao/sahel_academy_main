@@ -49,8 +49,6 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="sahel-academy-verif.vercel.app" android:pathPrefix="/app" />
-                <data android:scheme="http" android:host="sahel-academy-verif.vercel.app" android:pathPrefix="/app" />
                 <data android:scheme="https" android:host="sahel-academy.com" android:pathPrefix="/app" />
                 <data android:scheme="http" android:host="sahel-academy.com" android:pathPrefix="/app" />
             </intent-filter>

@@ -141,7 +141,7 @@ class _BourseDetailScreenState extends State<BourseDetailScreen> {
                                 icon: const Icon(Icons.share_outlined, color: Colors.white),
                                 tooltip: 'Partager cette bourse',
                                 onPressed: () {
-                                  final url = 'https://sahel-academy-verif.vercel.app/app/bourse/${bourse.id}';
+                                  final url = 'https://sahel-academy.com/app/bourse/${bourse.id}';
                                   final text = 'Découvrez la bourse "${bourse.titre}" sur Sahel Academy :\n\n👉 $url';
                                   // ignore: deprecated_member_use
                                   Share.share(text, subject: bourse.titre);

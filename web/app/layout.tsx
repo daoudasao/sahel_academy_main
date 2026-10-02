@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Analytics } from "@vercel/analytics/next";
 import SessionBar from "@/components/SessionBar";
+import BanniereAppAndroid from "@/components/BanniereAppAndroid";
 import {
   COULEUR_MARQUE,
   SITE_DESCRIPTION,
@@ -85,6 +86,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         <SessionBar />
         {children}
+        <BanniereAppAndroid />
         <Analytics />
       </body>
     </html>
