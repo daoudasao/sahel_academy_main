@@ -5,7 +5,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authClient, useSession } from "@/app/lib/auth-client";
 import { isStaffOrAdminRole } from "@/app/lib/permissions";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Lock } from "lucide-react";
+
+/**
+ * Valide et sécurise l'URL de retour après connexion / inscription.
+ * Empêche les redirections ouvertes vers des sites externes.
+ */
+function getSafeRedirectUrl(from: string | null, isStaff: boolean): string {
+  if (!from || !from.startsWith("/") || from.startsWith("//")) {
+    return isStaff ? "/dashboard" : "/";
+  }
+  // Un utilisateur simple ne peut pas être redirigé vers le back-office
+  if (from.startsWith("/dashboard") && !isStaff) {
+    return "/";
+  }
+  return from;
+}
 
 /** Logo Google officiel (multicolore) en SVG inline. */
 function GoogleIcon() {
@@ -35,8 +50,11 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
+  const modeParam = searchParams.get("mode");
 
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup">(
+    modeParam === "signup" ? "signup" : "login"
+  );
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,23 +64,12 @@ function LoginForm() {
 
   const { data: session, isPending: sessionLoading } = useSession();
 
-  // Si déjà connecté, rediriger selon le rôle
+  // Si déjà connecté, rediriger selon le rôle et le paramètre 'from'
   useEffect(() => {
     if (!sessionLoading && session?.user) {
       const role = (session.user as { role?: string })?.role;
-      if (isStaffOrAdminRole(role)) {
-        if (from && from.startsWith("/dashboard")) {
-          router.replace(from);
-        } else {
-          router.replace("/dashboard");
-        }
-      } else {
-        if (from && !from.startsWith("/dashboard")) {
-          router.replace(from);
-        } else {
-          router.replace("/");
-        }
-      }
+      const destination = getSafeRedirectUrl(from, isStaffOrAdminRole(role));
+      router.replace(destination);
     }
   }, [session, sessionLoading, from, router]);
 
@@ -90,20 +97,12 @@ function LoginForm() {
         loggedUserRole = (sess.data?.user as { role?: string } | undefined)?.role;
       }
 
-      // Redirection selon le rôle
-      if (isStaffOrAdminRole(loggedUserRole)) {
-        if (from && from.startsWith("/dashboard")) {
-          router.push(from);
-        } else {
-          router.push("/dashboard");
-        }
-      } else {
-        if (from && !from.startsWith("/dashboard")) {
-          router.push(from);
-        } else {
-          router.push("/");
-        }
-      }
+      // Redirection immédiate vers la page voulue ou tableau de bord / accueil
+      const destination = getSafeRedirectUrl(
+        from,
+        isStaffOrAdminRole(loggedUserRole)
+      );
+      router.push(destination);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
@@ -158,11 +157,36 @@ function LoginForm() {
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>
           {mode === "login" ? "Connexion" : "Créer un compte"}
         </h1>
-        <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
           {mode === "login"
             ? "Accédez à votre espace selon votre profil (Administration ou Candidat)."
             : "Créez votre compte pour postuler et suivre vos candidatures."}
         </p>
+
+        {from && (
+          <div
+            style={{
+              background: "#ecfdf5",
+              color: "#065f46",
+              border: "1px solid #a7f3d0",
+              borderRadius: 12,
+              padding: "10px 14px",
+              fontSize: 13,
+              marginBottom: 16,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              lineHeight: 1.4,
+            }}
+          >
+            <Lock style={{ width: 16, height: 16, flexShrink: 0, color: "#047857" }} />
+            <span>
+              {mode === "login"
+                ? "Veuillez vous connecter pour accéder directement au contenu demandé."
+                : "Créez votre compte pour accéder directement au contenu demandé."}
+            </span>
+          </div>
+        )}
 
         {error && (
           <div

@@ -78,7 +78,11 @@ export default function SessionBar() {
         </>
       ) : (
         <Link
-          href="/login"
+          href={
+            pathname && pathname !== "/"
+              ? `/login?from=${encodeURIComponent(pathname)}`
+              : "/login"
+          }
           className="flex items-center gap-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-900 dark:bg-slate-800 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-300 text-slate-700 dark:text-slate-200 px-3 py-1 text-xs font-bold transition-colors cursor-pointer"
           title="Se connecter"
         >

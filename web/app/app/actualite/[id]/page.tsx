@@ -12,5 +12,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function Page({ params }: PageProps) {
-  return <PagePublication id={(await params).id} />;
+  const { id } = await params;
+  return <PagePublication id={id} returnUrl={`/app/actualite/${id}`} />;
 }

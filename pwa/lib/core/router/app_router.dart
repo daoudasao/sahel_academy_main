@@ -158,6 +158,9 @@ GoRouter createRouter(AuthRepository auth) {
 
       // 3. Si l'utilisateur n'est pas connecté et se trouve sur le Splash ou un écran protégé :
       if (!connecte && (!surAuth || surSplash)) {
+        if (!surSplash && !surAuth && !surCompletion) {
+          _targetDeepLink = normalizedLocation;
+        }
         return '/bienvenue';
       }
 
