@@ -3,12 +3,14 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
   Body,
   Param,
   UseGuards,
 } from '@nestjs/common';
 import { SupportService } from './support.service';
 import { CreateSupportMessageDto } from './dto/create-support-message.dto';
+import { UpdateSupportMessageDto } from './dto/update-support-message.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from '../auth/guards/auth.guard';
@@ -42,6 +44,16 @@ export class SupportController {
     @Body() dto: CreateSupportMessageDto,
   ) {
     return this.supportService.sendAsClient(user.id, dto);
+  }
+
+  @SkipAudit()
+  @Patch('messages/:id')
+  updateMessage(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() dto: UpdateSupportMessageDto,
+  ) {
+    return this.supportService.updateMessage(id, dto.contenu, user);
   }
 
   @Delete('messages/:id')

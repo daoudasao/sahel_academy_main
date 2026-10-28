@@ -61,6 +61,7 @@ export class SupportService {
       Role.CHEF_CENTRE,
       Role.STAFF,
       Role.SUPPORT,
+      Role.COMMUNITY_MANAGER,
     ]);
 
     if (!isStaffOrAdmin) {
@@ -76,6 +77,37 @@ export class SupportService {
 
     this.supportGateway.emitMessageDeleted(msg.userId, messageId);
     return { success: true, id: messageId };
+  }
+
+  /// Modifie le texte d'un message (réservé à son auteur côté support ; un
+  /// client ne modifie que ses propres messages).
+  async updateMessage(messageId: string, contenu: string, currentUser: User) {
+    const msg = await this.prisma.supportMessage.findUnique({
+      where: { id: messageId },
+    });
+    if (!msg) throw new NotFoundException('Message introuvable.');
+    if (msg.type !== 'texte') {
+      throw new ForbiddenException('Seuls les messages texte sont modifiables.');
+    }
+
+    const isAgent = aUnRole(currentUser, [
+      Role.CHEF_CENTRE,
+      Role.STAFF,
+      Role.SUPPORT,
+      Role.COMMUNITY_MANAGER,
+    ]);
+    const autorise =
+      msg.expediteur === ExpediteurSupport.support
+        ? isAgent
+        : msg.userId === currentUser.id;
+    if (!autorise) throw new ForbiddenException('Action non autorisée.');
+
+    const updated = await this.prisma.supportMessage.update({
+      where: { id: messageId },
+      data: { contenu, modifieLe: new Date() },
+    });
+    this.supportGateway.emitMessageUpdated(msg.userId, updated);
+    return updated;
   }
 
   // ─── Côté support (Admin/Staff) ───

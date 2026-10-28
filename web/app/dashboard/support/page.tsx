@@ -27,6 +27,8 @@ import {
   Mic,
   Square,
   Trash2,
+  Pencil,
+  Check,
   Play,
   Pause,
 } from "lucide-react";
@@ -44,6 +46,7 @@ export type SupportMessageDto = {
   dureeSeconds?: number | null;
   lu: boolean;
   createdAt: string;
+  modifieLe?: string | null;
 };
 
 export type SupportConversationDto = {
@@ -137,6 +140,10 @@ export default function SupportPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [newMessage, setNewMessage] = useState("");
+  // Modification d'un message déjà envoyé
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -276,6 +283,18 @@ export default function SupportPage() {
         });
       });
 
+      socket.on("update_message", (msg: SupportMessageDto) => {
+        setMessages((prev) => prev.map((m) => (m.id === msg.id ? msg : m)));
+        setConversations((prev) =>
+          prev.map((c) => (c.lastMessage?.id === msg.id ? { ...c, lastMessage: msg } : c))
+        );
+      });
+
+      socket.on("delete_message", ({ id }: { id: string }) => {
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+        fetchConversations(true);
+      });
+
       socketRef.current = socket;
     } catch (e) {
       console.warn("Impossible d'initialiser le WebSocket support:", e);
@@ -335,6 +354,47 @@ export default function SupportPage() {
       unread: unreadTotal,
     };
   }, [conversations, getTicketStatus]);
+
+  const startEdit = (msg: SupportMessageDto) => {
+    setEditingId(msg.id);
+    setEditText(msg.contenu);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditText("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || savingEdit) return;
+    const contenu = editText.trim();
+    if (!contenu) return;
+    setSavingEdit(true);
+    try {
+      const updated = await supportApi.updateMessage(editingId, contenu);
+      setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      setConversations((prev) =>
+        prev.map((c) => (c.lastMessage?.id === updated.id ? { ...c, lastMessage: updated } : c))
+      );
+      cancelEdit();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible de modifier le message.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteMessage = async (msg: SupportMessageDto) => {
+    if (!window.confirm("Supprimer ce message ? Il disparaîtra aussi chez le client.")) return;
+    try {
+      await supportApi.deleteMessage(msg.id);
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+      if (editingId === msg.id) cancelEdit();
+      fetchConversations(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible de supprimer le message.");
+    }
+  };
 
   // Envoi d'un message texte
   const handleSendMessage = async () => {
@@ -870,7 +930,7 @@ export default function SupportPage() {
                         </div>
                       )}
 
-                      <div className={`flex ${isAdmin ? "justify-end" : "justify-start"} ${isFirstOfGroup ? "mt-3" : "mt-0.5"}`}>
+                      <div className={`group flex ${isAdmin ? "justify-end" : "justify-start"} ${isFirstOfGroup ? "mt-3" : "mt-0.5"}`}>
                         {!isAdmin && (
                           isLastOfGroup ? (
                             <div className="w-8 h-8 rounded-full bg-[#0a2d26]/10 dark:bg-emerald-500/20 flex items-center justify-center text-[#0a2d26] dark:text-emerald-400 font-bold text-xs shrink-0 mr-2 self-end">
@@ -879,6 +939,29 @@ export default function SupportPage() {
                           ) : (
                             <div className="w-8 mr-2 shrink-0" aria-hidden />
                           )
+                        )}
+
+                        {isAdmin && editingId !== msg.id && (
+                          <div className="flex items-center gap-0.5 mr-1 self-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            {msg.type === "texte" && (
+                              <button
+                                type="button"
+                                onClick={() => startEdit(msg)}
+                                title="Modifier"
+                                className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMessage(msg)}
+                              title="Supprimer"
+                              className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
 
                         <div className="max-w-[75%]">
@@ -927,12 +1010,46 @@ export default function SupportPage() {
                                 </a>
                               </div>
                             ) : (
-                              <p className="whitespace-pre-wrap break-words">{msg.contenu}</p>
+                              editingId === msg.id ? (
+                                <div className="flex flex-col gap-2 min-w-[240px]">
+                                  <textarea
+                                    autoFocus
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Escape") cancelEdit();
+                                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                                        e.preventDefault();
+                                        handleSaveEdit();
+                                      }
+                                    }}
+                                    rows={3}
+                                    className="w-full rounded-lg bg-white/10 border border-white/30 p-2 text-sm text-white outline-none resize-y"
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <button type="button" onClick={cancelEdit} className="px-2 py-1 rounded-md text-xs bg-white/10 hover:bg-white/20">
+                                      Annuler
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleSaveEdit}
+                                      disabled={savingEdit || !editText.trim()}
+                                      className="px-2 py-1 rounded-md text-xs bg-white text-[#0a2d26] font-semibold disabled:opacity-50 flex items-center gap-1"
+                                    >
+                                      {savingEdit ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                      Enregistrer
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="whitespace-pre-wrap break-words">{msg.contenu}</p>
+                              )
                             )}
                           </div>
 
                           {isLastOfGroup && (
                             <div className={`flex items-center gap-1 mt-1 text-[10px] text-slate-400 dark:text-slate-500 ${isAdmin ? "justify-end" : "justify-start"}`}>
+                              {msg.modifieLe && <span className="italic">modifié ·</span>}
                               {formatTime(msg.createdAt)}
                               {isAdmin && (
                                 <CheckCheck className={`w-3 h-3 ${msg.lu ? "text-emerald-500 dark:text-emerald-400" : "text-slate-400"}`} />
@@ -1067,14 +1184,15 @@ export default function SupportPage() {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
+                      // Entrée = retour à la ligne ; Ctrl/Cmd + Entrée = envoyer
+                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                         e.preventDefault();
                         handleSendMessage();
                       }
                     }}
                     placeholder="Tapez votre réponse ici..."
-                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 min-h-[40px] text-sm py-2 px-1 outline-none text-slate-800 dark:text-slate-100"
-                    rows={1}
+                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 min-h-[40px] overflow-y-auto text-sm py-2 px-1 outline-none text-slate-800 dark:text-slate-100"
+                    rows={Math.min(5, Math.max(1, newMessage.split("\n").length))}
                   />
 
                   <button
@@ -1093,7 +1211,7 @@ export default function SupportPage() {
                     ? "Enregistrement vocal actif — cliquez sur Terminer pour valider"
                     : audioPreviewUrl
                     ? "Prévisualisation du vocal — cliquez sur Envoyer"
-                    : "Entrée pour envoyer • Maj + Entrée pour retour à la ligne"}
+                    : "Entrée pour retour à la ligne • Ctrl + Entrée pour envoyer"}
                 </span>
               </div>
             </div>

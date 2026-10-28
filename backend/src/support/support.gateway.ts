@@ -74,4 +74,12 @@ export class SupportGateway implements OnGatewayConnection, OnGatewayDisconnect 
     this.server.to(`user_${userId}`).emit('delete_message', { id: messageId });
     this.server.to('admin_room').emit('delete_message', { id: messageId });
   }
+
+  /**
+   * Diffusion de la modification d'un message vers la room client et admin.
+   */
+  emitMessageUpdated(userId: string, message: any) {
+    this.server.to(`user_${userId}`).emit('update_message', message);
+    this.server.to('admin_room').emit('update_message', message);
+  }
 }

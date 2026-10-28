@@ -365,6 +365,7 @@ model SupportMessage {
   dureeSeconds Int?
   lu           Boolean           @default(false)
   createdAt    DateTime          @default(now())
+  modifieLe    DateTime?
 
   user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
