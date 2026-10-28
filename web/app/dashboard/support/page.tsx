@@ -410,7 +410,7 @@ export default function SupportPage() {
         type: "texte",
       });
 
-      setMessages((prev) => [...prev, created]);
+      setMessages((prev) => (prev.some((m) => m.id === created.id) ? prev : [...prev, created]));
       setConversations((prev) =>
         prev.map((c) =>
           c.id === activeUserId
@@ -450,7 +450,7 @@ export default function SupportPage() {
         audioUrl: res.url,
       });
 
-      setMessages((prev) => [...prev, created]);
+      setMessages((prev) => (prev.some((m) => m.id === created.id) ? prev : [...prev, created]));
       setConversations((prev) =>
         prev.map((c) =>
           c.id === activeUserId
@@ -588,7 +588,7 @@ export default function SupportPage() {
         dureeSeconds: duree,
       });
 
-      setMessages((prev) => [...prev, created]);
+      setMessages((prev) => (prev.some((m) => m.id === created.id) ? prev : [...prev, created]));
       setConversations((prev) =>
         prev.map((c) =>
           c.id === activeUserId
@@ -1024,7 +1024,7 @@ export default function SupportPage() {
                                       }
                                     }}
                                     rows={3}
-                                    className="w-full rounded-lg bg-white/10 border border-white/30 p-2 text-sm text-white outline-none resize-y"
+                                    className="w-full rounded-lg bg-black/30 border border-white/30 p-2 text-sm text-white caret-white outline-none resize-y"
                                   />
                                   <div className="flex justify-end gap-2">
                                     <button type="button" onClick={cancelEdit} className="px-2 py-1 rounded-md text-xs bg-white/10 hover:bg-white/20">
@@ -1034,7 +1034,7 @@ export default function SupportPage() {
                                       type="button"
                                       onClick={handleSaveEdit}
                                       disabled={savingEdit || !editText.trim()}
-                                      className="px-2 py-1 rounded-md text-xs bg-white text-[#0a2d26] font-semibold disabled:opacity-50 flex items-center gap-1"
+                                      className="px-2 py-1 rounded-md text-xs bg-emerald-200 text-[#04201a] font-semibold disabled:opacity-50 flex items-center gap-1"
                                     >
                                       {savingEdit ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                                       Enregistrer
