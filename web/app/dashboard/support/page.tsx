@@ -174,13 +174,39 @@ export default function SupportPage() {
   }, []);
 
   // Scroll automatique en bas du fil de discussion
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Uniquement à l'ouverture d'une discussion ou à l'arrivée d'un nouveau message :
+  // le rafraîchissement automatique ne doit pas ramener en bas quand on relit l'historique.
+  const lastScrolledRef = useRef<{ userId: string | null; lastId: string | null }>({
+    userId: null,
+    lastId: null,
+  });
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const lastId = messages.length ? messages[messages.length - 1].id : null;
+    const prev = lastScrolledRef.current;
+    const conversationChanged = prev.userId !== activeUserId;
+    const newMessage = !conversationChanged && lastId !== prev.lastId;
+
+    if (messages.length > 0 || conversationChanged) {
+      lastScrolledRef.current = { userId: activeUserId, lastId };
+    }
+
+    if (messages.length === 0) return;
+
+    if (conversationChanged) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    } else if (newMessage) {
+      const container = messagesEndRef.current?.parentElement;
+      const nearBottom =
+        !container ||
+        container.scrollHeight - container.scrollTop - container.clientHeight < 200;
+      const lastMsg = messages[messages.length - 1];
+      // On suit les nouveaux messages si l'on est déjà en bas, ou si c'est le nôtre
+      if (nearBottom || lastMsg.expediteur === "support") {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [messages, activeUserId]);
 
   // Charger la liste des conversations
   const fetchConversations = useCallback(async (isSilent = false) => {
