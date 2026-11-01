@@ -1,4 +1,5 @@
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { JournalErreursFilter } from './common/journal-erreurs.filter';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -6,6 +7,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { appOrigins } from './auth/auth';
 import basicAuth from 'express-basic-auth';
+import type { NextFunction, Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -15,6 +17,23 @@ async function bootstrap() {
   // L'API tourne derrière des proxys (Cloudflare + Render) : on fait confiance
   // à X-Forwarded-* pour retrouver l'adresse et le protocole du client.
   app.set('trust proxy', true);
+
+  // ─── Journal des requêtes ───
+  // Placé en premier pour couvrir aussi les routes better-auth. La query string
+  // est omise : elle peut contenir des jetons.
+  const httpLogger = new Logger('HTTP');
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const debut = process.hrtime.bigint();
+    res.on('finish', () => {
+      const ms = Number(process.hrtime.bigint() - debut) / 1e6;
+      const chemin = req.originalUrl.split('?')[0];
+      const ligne = `${req.method} ${chemin} ${res.statusCode} ${ms.toFixed(0)}ms - ${req.ip}`;
+      if (res.statusCode >= 500) httpLogger.error(ligne);
+      else if (res.statusCode >= 400) httpLogger.warn(ligne);
+      else httpLogger.log(ligne);
+    });
+    next();
+  });
 
   // ─── En-têtes de sécurité ───
   app.use(
@@ -42,6 +61,8 @@ async function bootstrap() {
 
   // ─── Global Prefix ───
   app.setGlobalPrefix('api/v1');
+
+  app.useGlobalFilters(new JournalErreursFilter(app.get(HttpAdapterHost).httpAdapter));
 
   // ─── Validation ───
   app.useGlobalPipes(
