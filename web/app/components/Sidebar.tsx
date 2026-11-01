@@ -356,7 +356,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 m-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 sm:p-6 m-4 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-lg font-semibold text-slate-900 mb-2">Déconnexion</h3>
             <p className="text-sm text-slate-500 mb-6">
               Êtes-vous sûr de vouloir vous déconnecter ?

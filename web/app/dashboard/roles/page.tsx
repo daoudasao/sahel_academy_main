@@ -449,7 +449,7 @@ export default function SimplifiedRolesPage() {
       {/* MODAL SIMPLIFIÉ NOUVEAU RÔLE */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[var(--bg-card)] rounded-2xl max-w-md w-full p-5 shadow-2xl border border-[var(--border-color)] space-y-4">
+          <div className="bg-[var(--bg-card)] rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-5 shadow-2xl border border-[var(--border-color)] space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
               <h3 className="font-bold text-base text-[var(--text-primary)]">Créer un Rôle Personnalisé</h3>
               <button

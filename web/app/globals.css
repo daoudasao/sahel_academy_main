@@ -1531,8 +1531,39 @@ tbody tr:last-child td {
 
   .modal {
     max-width: calc(100vw - 24px);
+    max-height: 90dvh;
   }
+
+  .modal-header { padding: 16px 16px 0; }
+
+  /* Tableaux : défilement horizontal plutôt que colonnes écrasées */
+  .table-responsive > table {
+    min-width: 640px;
+  }
+
+  /* 16px évite le zoom automatique d'iOS au focus d'un champ */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Zones tactiles confortables */
+  .sidebar-link {
+    min-height: 44px;
+  }
+
+  .sidebar {
+    max-width: 85vw;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .main-content {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
 }
+
 
 /* ─── Bandeau d'aide (guidage admin) ─── */
 .info-banner {

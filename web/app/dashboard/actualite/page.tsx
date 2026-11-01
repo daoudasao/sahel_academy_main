@@ -96,7 +96,7 @@ function LigneCommentaire({ c, reply, onDelete, onReply }: { c: Commentaire; rep
               )}
             </div>
             <button 
-              className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50 opacity-0 group-hover/comm:opacity-100 focus:opacity-100" 
+              className="text-slate-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/comm:opacity-100 focus:opacity-100" 
               onClick={onDelete} 
               title="Supprimer le commentaire"
             >
@@ -627,7 +627,7 @@ export default function ActualitePage() {
                     </div>
                     
                     <button 
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover/post:opacity-100 focus:opacity-100"
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/post:opacity-100 focus:opacity-100"
                       onClick={() => supprimerPost(p.id)}
                       title="Supprimer la publication"
                     >
