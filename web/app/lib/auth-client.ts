@@ -3,7 +3,7 @@
 import { createAuthClient } from "better-auth/react";
 import { adminClient } from "better-auth/client/plugins";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+export const API_URL = process.env.NEXT_PUBLIC_API_URL
   ?? (process.env.NODE_ENV === "production"
     ? (() => { throw new Error("NEXT_PUBLIC_API_URL manquant en production"); })()
     : "http://localhost:3001/api/v1");

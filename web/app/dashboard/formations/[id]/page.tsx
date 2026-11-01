@@ -3,7 +3,6 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import InfoBanner from "@/app/components/InfoBanner";
 import { formatFCFA } from "@/app/lib/mock-data";
 import { formationsApi, usersApi, api } from "@/app/lib/api";
 import {
@@ -186,10 +185,6 @@ export default function FormationDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const inscriptionsList = formation.inscriptions || [];
-  const totalInscrits = inscriptionsList.length;
-  const inscritsActifs = inscriptionsList.filter((i: any) => estActif(i.statut)).length;
-  const inscritsSuspendus = inscriptionsList.filter((i: any) => i.statut === "suspendu").length;
-  const inscritsAnnules = inscriptionsList.filter((i: any) => estAbandonne(i.statut)).length;
 
   // Filtered students
   const filteredInscriptions = inscriptionsList.filter((i: any) => {
@@ -246,303 +241,74 @@ export default function FormationDetailPage({ params }: { params: Promise<{ id: 
             Modifier
           </Link>
 
-          <button
-            onClick={handleOpenAddStudent}
-            className="px-3.5 py-2 rounded-xl bg-[#0a2d26] dark:bg-emerald-600 text-white font-semibold text-xs inline-flex items-center gap-1.5 hover:bg-[#124b40] dark:hover:bg-emerald-500 transition shadow-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            Inscrire un élève
-          </button>
         </div>
       </div>
-
-      <InfoBanner title="Gestion des Élèves & Accès au cours">
-        Consultez l&apos;ensemble des étudiants inscrits à cette formation. Vous pouvez <strong>suspendre l&apos;accès</strong> d&apos;un élève (ex: retard de paiement), <strong>réactiver son accès</strong> ou l&apos;inscrire directement à ce cours.
-      </InfoBanner>
 
       {/* Carte Résumé de la Formation */}
-      <div className="bg-white dark:bg-[#111c24] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-start gap-4">
-              {formation.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={formation.imageUrl}
-                  alt={formation.titre}
-                  className="w-20 h-20 rounded-xl object-cover border border-slate-200 dark:border-slate-800 shrink-0"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-xl bg-[#0a2d26]/10 dark:bg-emerald-500/20 flex items-center justify-center text-[#0a2d26] dark:text-emerald-400 font-bold text-2xl shrink-0">
-                  <GraduationCap className="w-10 h-10" />
-                </div>
-              )}
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      formation.statut === "active"
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60"
-                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    {formation.statut === "active" ? "Formation Active" : "Inactive"}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider border border-indigo-200 dark:border-indigo-900/60">
-                    Niveau : {formation.niveau || "Standard"}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pt-1">
-                  {formation.description || "Aucune description renseignée."}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs border-t border-slate-100 dark:border-slate-800">
-              <div>
-                <span className="text-slate-400">Formateur référent :</span>
-                <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
-                  {formation.formateur?.nom || "Non assigné"}
-                </p>
-              </div>
-              <div>
-                <span className="text-slate-400">Durée du programme :</span>
-                <p className="font-bold text-slate-800 dark:text-slate-200">{formation.dureeMois || 1} mois</p>
-              </div>
-              <div>
-                <span className="text-slate-400">Tarif Mensualité :</span>
-                <p className="font-bold text-emerald-600 dark:text-emerald-400">{formatFCFA(formation.prixMensualite || 0)} / mois</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Statistiques Inscriptions */}
-          <div className="bg-slate-50 dark:bg-[#15222e] rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 flex flex-col justify-between">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              Statistiques d&apos;inscriptions
-            </h4>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white dark:bg-[#111c24] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500 font-medium">Total Élèves</span>
-                <div className="text-xl font-bold text-slate-900 dark:text-slate-100">{totalInscrits}</div>
-              </div>
-              <div className="bg-white dark:bg-[#111c24] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500 font-medium">Actifs</span>
-                <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{inscritsActifs}</div>
-              </div>
-              <div className="bg-white dark:bg-[#111c24] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500 font-medium">Suspendus</span>
-                <div className="text-xl font-bold text-amber-600 dark:text-amber-400">{inscritsSuspendus}</div>
-              </div>
-              <div className="bg-white dark:bg-[#111c24] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-                <span className="text-[11px] text-slate-500 font-medium">Abandons</span>
-                <div className="text-xl font-bold text-rose-500 dark:text-rose-400">{inscritsAnnules}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Barre de Recherche et Filtres des Élèves */}
-      <div className="bg-white dark:bg-[#111c24] rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Users className="w-5 h-5 text-emerald-600" />
-              Liste des étudiants inscrits ({filteredInscriptions.length})
-            </h3>
-            <p className="text-xs text-slate-500">Gérez les accès et le statut de chaque élève pour ce cours.</p>
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Rechercher élève, email, tel..."
-                value={studentSearch}
-                onChange={(e) => setStudentSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-[#15222e] border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#0a2d26]"
+      <div className="bg-white dark:bg-[#111c24] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="h-16 sm:h-20 bg-gradient-to-r from-[#0a2d26] to-emerald-700" />
+        <div className="px-4 sm:px-6 pb-5 -mt-8 sm:-mt-10">
+          <div className="flex items-end gap-4">
+            {formation.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={formation.imageUrl}
+                alt={formation.titre}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border-2 border-white dark:border-[#111c24] bg-white shrink-0"
               />
+            ) : (
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-white dark:bg-[#15222e] border-2 border-white dark:border-[#111c24] flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0">
+                <GraduationCap className="w-8 h-8 sm:w-10 sm:h-10" />
+              </div>
+            )}
+            <div className="flex items-center gap-2 flex-wrap pb-1">
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  formation.statut === "active"
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60"
+                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                {formation.statut === "active" ? "Active" : "Inactive"}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider border border-indigo-200 dark:border-indigo-900/60">
+                Niveau : {formation.niveau || "Standard"}
+              </span>
             </div>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-50 dark:bg-[#15222e] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="actif">Actif (Inscrit)</option>
-              <option value="suspendu">Suspendu</option>
-              <option value="termine">Terminé</option>
-              <option value="annule">Abandonné / Annulé</option>
-            </select>
           </div>
-        </div>
 
-        {/* Tableau des Inscriptions */}
-        <div className="overflow-x-auto">
-          {filteredInscriptions.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 space-y-2">
-              <Users className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Aucun étudiant trouvé.</p>
-              <p className="text-xs text-slate-400">Aucun élève n&apos;est inscrit à ce cours selon ces critères.</p>
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            {formation.description || "Aucune description renseignée."}
+          </p>
+          <p className="mt-2 text-xs text-slate-500">
+            Formateur : <strong className="text-slate-700 dark:text-slate-300">{formation.formateur?.nom || "Non assigné"}</strong>
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+            <div className="rounded-xl bg-slate-50 dark:bg-[#15222e] border border-slate-200 dark:border-slate-800 p-3.5">
+              <span className="text-[11px] text-slate-500 font-medium">Prix d&apos;inscription</span>
+              <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatFCFA(formation.prixInscription || 0)}</div>
             </div>
-          ) : (
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-[#15222e] text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                  <th className="py-3 px-4 font-semibold">Étudiant</th>
-                  <th className="py-3 px-4 font-semibold">Contact</th>
-                  <th className="py-3 px-4 font-semibold">Date d&apos;inscription</th>
-                  <th className="py-3 px-4 font-semibold">Statut d&apos;accès</th>
-                  <th className="py-3 px-4 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredInscriptions.map((ins: any) => {
-                  const u = ins.user || {};
-                  const isActif = estActif(ins.statut);
-                  const isSuspendu = ins.statut === "suspendu";
-                  const isTermine = ins.statut === "termine";
-
-                  return (
-                    <tr key={ins.id || u.id} className="hover:bg-slate-50/80 dark:hover:bg-[#15222e]/60 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          {u.avatarUrl || u.image || u.avatar ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={u.avatarUrl || u.image || u.avatar} alt={u.nom} className="w-9 h-9 rounded-full object-cover shrink-0" />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-[#0a2d26]/10 dark:bg-emerald-500/20 text-[#0a2d26] dark:text-emerald-400 font-bold flex items-center justify-center shrink-0">
-                              {u.nom ? u.nom.substring(0, 2).toUpperCase() : "ET"}
-                            </div>
-                          )}
-                          <div>
-                            <Link
-                              href={`/dashboard/utilisateurs/${u.id}`}
-                              className="font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition"
-                            >
-                              {u.nom || "Élève Sans Nom"}
-                            </Link>
-                            <div className="text-[11px] text-slate-400">ID: {u.id?.substring(0, 10)}...</div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-4 space-y-0.5">
-                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
-                          <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{u.email || "Non renseigné"}</span>
-                        </div>
-                        {u.telephone && (
-                          <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
-                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span>{u.telephone}</span>
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                        {ins.createdAt || ins.dateInscription
-                          ? new Date(ins.createdAt || ins.dateInscription).toLocaleDateString("fr-FR", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "Non spécifiée"}
-                      </td>
-
-                      <td className="py-3 px-4">
-                        {isActif ? (
-                          <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-[10px] border border-emerald-200 dark:border-emerald-900/60 inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Accès Actif
-                          </span>
-                        ) : isTermine ? (
-                          <span className="px-2.5 py-1 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 font-bold text-[10px] border border-sky-200 dark:border-sky-900/60 inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Terminé
-                          </span>
-                        ) : isSuspendu ? (
-                          <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-[10px] border border-amber-200 dark:border-amber-900/60 inline-flex items-center gap-1">
-                            <ShieldAlert className="w-3 h-3" /> Suspendu
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 font-bold text-[10px] border border-rose-200 dark:border-rose-900/60 inline-flex items-center gap-1">
-                            <UserX className="w-3 h-3" /> Abandonné
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Bouton Suspendre / Réactiver */}
-                          {isActif ? (
-                            <button
-                              onClick={() =>
-                                setStatusModal({
-                                  userId: u.id,
-                                  userName: u.nom,
-                                  newStatut: "suspendu",
-                                })
-                              }
-                              className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 hover:bg-amber-100 font-semibold text-xs transition inline-flex items-center gap-1"
-                              title="Suspendre l'accès de cet élève"
-                            >
-                              <UserMinus className="w-3.5 h-3.5" />
-                              Suspendre
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() =>
-                                setStatusModal({
-                                  userId: u.id,
-                                  userName: u.nom,
-                                  newStatut: "en_cours",
-                                })
-                              }
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100 font-semibold text-xs transition inline-flex items-center gap-1"
-                              title="Réactiver l'accès au cours"
-                            >
-                              <UserCheck className="w-3.5 h-3.5" />
-                              Réactiver
-                            </button>
-                          )}
-
-                          {/* Lien Profil Élève */}
-                          <Link
-                            href={`/dashboard/utilisateurs/${u.id}`}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                            title="Consulter la fiche profil de l'élève"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </Link>
-
-                          {/* Bouton Désinscrire */}
-                          <button
-                            onClick={() =>
-                              setDeleteModal({
-                                userId: u.id,
-                                userName: u.nom,
-                              })
-                            }
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                            title="Supprimer l'inscription de l'élève"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+            <div className="rounded-xl bg-slate-50 dark:bg-[#15222e] border border-slate-200 dark:border-slate-800 p-3.5">
+              <span className="text-[11px] text-slate-500 font-medium">Mensualité</span>
+              <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatFCFA(formation.prixMensualite || 0)} / mois</div>
+            </div>
+            <div className="rounded-xl bg-slate-50 dark:bg-[#15222e] border border-slate-200 dark:border-slate-800 p-3.5">
+              <span className="text-[11px] text-slate-500 font-medium">Durée</span>
+              <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{formation.dureeMois || 1} mois</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* MODAL : Inscrire un élève manuellement */}
+      <button
+        onClick={handleOpenAddStudent}
+        className="w-full sm:w-auto sm:min-w-64 mx-auto px-5 py-3 rounded-xl bg-[#0a2d26] dark:bg-emerald-600 text-white font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#124b40] dark:hover:bg-emerald-500 transition shadow-sm cursor-pointer"
+      >
+        <Plus className="w-4 h-4" />
+        Inscrire un élève
+      </button>
+
       <Dialog open={showAddStudentModal} onOpenChange={setShowAddStudentModal}>
         <DialogContent className="w-[95vw] sm:max-w-[480px] rounded-2xl p-6">
           <DialogHeader>

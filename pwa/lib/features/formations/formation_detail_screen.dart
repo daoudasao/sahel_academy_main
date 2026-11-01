@@ -231,7 +231,7 @@ class _FormationDetailScreenState extends State<FormationDetailScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // Informations rapides (département, niveau, durée)
+                    // Informations rapides (département, niveau)
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -244,10 +244,6 @@ class _FormationDetailScreenState extends State<FormationDetailScreen> {
                         _InfoChip(
                           icon: Icons.bar_chart,
                           label: formation.niveau,
-                        ),
-                        _InfoChip(
-                          icon: Icons.schedule,
-                          label: '${formation.dureeMois} mois',
                         ),
                       ],
                     ),
@@ -326,7 +322,6 @@ class _FormationDetailScreenState extends State<FormationDetailScreen> {
       const TextStyle(fontSize: 18, fontWeight: FontWeight.bold);
 }
 
-/// Carte récapitulant les frais et le coût total estimé.
 /// Carte des dates : publication et date limite de candidature.
 class _CarteDates extends StatelessWidget {
   final Formation formation;
@@ -436,8 +431,6 @@ class _CarteTarifs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     if (formation.estBourse) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -463,50 +456,99 @@ class _CarteTarifs extends StatelessWidget {
       );
     }
 
-    // Coût total estimé = inscription + (mensualité × durée).
-    final total =
-        formation.prixInscription +
-        formation.prixMensualite * formation.dureeMois;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _ligne('Frais d\'inscription', formatFcfa(formation.prixInscription)),
-          const Divider(height: 20),
-          _ligne(
-            'Mensualité',
-            '${formatFcfa(formation.prixMensualite)}  ×  ${formation.dureeMois} mois',
+          Expanded(
+            child: _TuileTarif(
+              icone: Icons.confirmation_number_outlined,
+              label: 'Inscription',
+              valeur: formatFcfa(formation.prixInscription),
+            ),
           ),
-          const Divider(height: 20),
-          _ligne('Coût total estimé', formatFcfa(total), enGras: true),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _TuileTarif(
+              icone: Icons.payments_outlined,
+              label: 'Mensualité',
+              valeur: formatFcfa(formation.prixMensualite),
+              suffixe: '/ mois',
+              accent: true,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _TuileTarif(
+              icone: Icons.schedule,
+              label: 'Durée',
+              valeur: '${formation.dureeMois}',
+              suffixe: 'mois',
+            ),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _ligne(String label, String valeur, {bool enGras = false}) {
-    final style = TextStyle(
-      fontWeight: enGras ? FontWeight.bold : FontWeight.normal,
-      fontSize: enGras ? 16 : 14,
-    );
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: style),
-        Flexible(
-          child: Text(
-            valeur,
-            textAlign: TextAlign.right,
-            style: style.copyWith(fontWeight: FontWeight.w600),
-          ),
+/// Tuile affichant un tarif ou la durée de la formation.
+class _TuileTarif extends StatelessWidget {
+  final IconData icone;
+  final String label;
+  final String valeur;
+  final String? suffixe;
+  final bool accent;
+
+  const _TuileTarif({
+    required this.icone,
+    required this.label,
+    required this.valeur,
+    this.suffixe,
+    this.accent = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final couleur = accent ? AppColors.emerald : scheme.onSurface;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: accent
+            ? AppColors.emerald.withValues(alpha: 0.08)
+            : scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: accent
+              ? AppColors.emerald.withValues(alpha: 0.35)
+              : scheme.outlineVariant,
         ),
-      ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icone, size: 20, color: accent ? AppColors.emerald : scheme.outline),
+          const SizedBox(height: 10),
+          Text(label, style: TextStyle(fontSize: 12, color: scheme.outline)),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              valeur,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: couleur,
+              ),
+            ),
+          ),
+          if (suffixe != null)
+            Text(suffixe!, style: TextStyle(fontSize: 12, color: scheme.outline)),
+        ],
+      ),
     );
   }
 }

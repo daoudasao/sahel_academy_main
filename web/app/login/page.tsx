@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { authClient, useSession } from "@/app/lib/auth-client";
+import { API_URL, authClient, useSession } from "@/app/lib/auth-client";
 import { isStaffOrAdminRole } from "@/app/lib/permissions";
 import { ArrowLeft, Loader2, Lock } from "lucide-react";
 
@@ -20,6 +20,56 @@ function getSafeRedirectUrl(from: string | null, isStaff: boolean): string {
     return "/";
   }
   return from;
+}
+
+/** Erreur renvoyée par better-auth quand le serveur a répondu (4xx/5xx). */
+type AuthApiError = { message?: string; status?: number; statusText?: string; code?: string };
+
+function formatApiError(err: AuthApiError, endpoint: string): string {
+  return [
+    err.message || "Le serveur a refusé la requête",
+    `Statut HTTP : ${err.status ?? "?"} ${err.statusText ?? ""}`.trim(),
+    err.code ? `Code : ${err.code}` : null,
+    `URL : ${API_URL}/auth${endpoint}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * Diagnostic d'une erreur réseau (« Failed to fetch ») : la requête n'a reçu
+ * aucune réponse lisible. On teste si le serveur est joignable pour distinguer
+ * un serveur injoignable d'un blocage CORS.
+ */
+async function diagnoseNetworkError(err: unknown, endpoint: string): Promise<string> {
+  const url = `${API_URL}/auth${endpoint}`;
+  const brut = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  const lignes = [`Erreur réseau : la requête n'a pas abouti.`, `Détail : ${brut}`, `URL : ${url}`];
+
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    lignes.push("Cause probable : l'appareil n'est pas connecté à Internet.");
+    return lignes.join("\n");
+  }
+  if (window.location.protocol === "https:" && url.startsWith("http:")) {
+    lignes.push("Cause probable : contenu mixte (page en HTTPS, API en HTTP) bloqué par le navigateur.");
+    return lignes.join("\n");
+  }
+
+  const debut = performance.now();
+  try {
+    // no-cors : réussit dès que le serveur répond, même si CORS bloquerait la vraie requête.
+    await fetch(`${API_URL}/auth/ok`, { mode: "no-cors", cache: "no-store" });
+    lignes.push(
+      `Test : le serveur API répond (${Math.round(performance.now() - debut)} ms).`,
+      `Cause probable : CORS (origine ${window.location.origin} non autorisée côté API) ou requête coupée par le proxy.`
+    );
+  } catch {
+    lignes.push(
+      `Test : le serveur API est injoignable (${Math.round(performance.now() - debut)} ms).`,
+      "Cause probable : API arrêtée/redémarrage du conteneur, DNS, certificat SSL ou proxy (502/504)."
+    );
+  }
+  return lignes.join("\n");
 }
 
 /** Logo Google officiel (multicolore) en SVG inline. */
@@ -77,19 +127,26 @@ function LoginForm() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    const endpoint = mode === "login" ? "/sign-in/email" : "/sign-up/email";
 
     try {
       let loggedUserRole: string | undefined;
 
-      if (mode === "login") {
-        const res = await authClient.signIn.email({ email, password });
-        if (res.error) throw new Error(res.error.message || "Identifiants invalides");
-        loggedUserRole = (res.data?.user as { role?: string } | undefined)?.role;
-      } else {
-        const res = await authClient.signUp.email({ email, password, name: nom });
-        if (res.error) throw new Error(res.error.message || "Inscription impossible");
-        loggedUserRole = (res.data?.user as { role?: string } | undefined)?.role;
+      const res =
+        mode === "login"
+          ? await authClient.signIn.email({ email, password })
+          : await authClient.signUp.email({ email, password, name: nom });
+      if (res.error) {
+        console.error("[login] erreur API", res.error);
+        // status 0 / absent = aucune réponse HTTP → c'est une erreur réseau
+        if (!res.error.status) {
+          setError(await diagnoseNetworkError(res.error.message || res.error, endpoint));
+          return;
+        }
+        setError(formatApiError(res.error as AuthApiError, endpoint));
+        return;
       }
+      loggedUserRole = (res.data?.user as { role?: string } | undefined)?.role;
 
       // Si le rôle n'est pas directement présent dans la réponse, on relit la session
       if (!loggedUserRole) {
@@ -105,7 +162,12 @@ function LoginForm() {
       router.push(destination);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      console.error("[login] exception", err);
+      setError(
+        err instanceof TypeError
+          ? await diagnoseNetworkError(err, endpoint)
+          : `${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}\nURL : ${API_URL}/auth${endpoint}`
+      );
     } finally {
       setLoading(false);
     }
@@ -198,6 +260,8 @@ function LoginForm() {
               padding: "10px 12px",
               fontSize: 13,
               marginBottom: 16,
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
             }}
           >
             {error}
