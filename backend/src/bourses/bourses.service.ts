@@ -153,35 +153,53 @@ export class BoursesService {
   }
 
   async update(id: string, updateBourseDto: UpdateBourseDto) {
-    // Les champs se gèrent via addChamp/removeChamp, on les ignore ici.
-    const { champs: _champs, ...data } = updateBourseDto;
-    try {
-      const ancienneBourse = await this.prisma.bourse.findUnique({ where: { id } });
-      const updated = await this.prisma.bourse.update({
-        where: { id },
-        data,
-        include: { champs: true },
-      });
+    // Si `champs` est fourni, le formulaire est remplacé en bloc, dans la même
+    // transaction que la bourse : tout passe ou rien ne change (jamais de
+    // formulaire à moitié vidé).
+    const { champs, ...data } = updateBourseDto;
 
-      if (ancienneBourse && ancienneBourse.statut !== StatutBourse.ouverte && updated.statut === StatutBourse.ouverte) {
-        try {
-          await this.notificationsService.create({
-            titre: 'Nouvelle bourse d\'études disponible ! 🎓',
-            message: `La bourse "${updated.titre}" est désormais ouverte aux candidatures. Postulez dès maintenant !`,
-            type: TypeNotification.actualite,
-            cible: 'global',
-            cibleId: updated.id,
-            route: `/bourse/${updated.id}`,
+    const ancienneBourse = await this.prisma.bourse.findUnique({ where: { id } });
+    if (!ancienneBourse) throw new NotFoundException('Bourse non trouvée');
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (champs) {
+        await tx.champFormulaire.deleteMany({ where: { bourseId: id } });
+        if (champs.length) {
+          await tx.champFormulaire.createMany({
+            data: champs.map((c, i) => ({
+              ...c,
+              bourseId: id,
+              ordre: c.ordre ?? i,
+            })),
           });
-        } catch (err) {
-          console.error('Erreur lors de l\'envoi de la notification de publication de bourse:', err);
         }
       }
+      return tx.bourse.update({
+        where: { id },
+        data,
+        include: { champs: { orderBy: { ordre: 'asc' } } },
+      });
+    });
 
-      return updated;
-    } catch {
-      throw new NotFoundException('Bourse non trouvée');
+    if (
+      ancienneBourse.statut !== StatutBourse.ouverte &&
+      updated.statut === StatutBourse.ouverte
+    ) {
+      try {
+        await this.notificationsService.create({
+          titre: 'Nouvelle bourse d\'études disponible ! 🎓',
+          message: `La bourse "${updated.titre}" est désormais ouverte aux candidatures. Postulez dès maintenant !`,
+          type: TypeNotification.actualite,
+          cible: 'global',
+          cibleId: updated.id,
+          route: `/bourse/${updated.id}`,
+        });
+      } catch (err) {
+        console.error('Erreur lors de l\'envoi de la notification de publication de bourse:', err);
+      }
     }
+
+    return updated;
   }
 
   async remove(id: string) {
@@ -195,7 +213,8 @@ export class BoursesService {
   // ─── Champs de formulaire ───
 
   async addChamp(bourseId: string, dto: CreateChampDto) {
-    await this.findOne(bourseId);
+    // Route réservée à l'équipe : une bourse en brouillon/clôturée reste éditable.
+    await this.findOne(bourseId, { pourEquipe: true });
     return this.prisma.champFormulaire.create({
       data: { bourseId, ...dto },
     });

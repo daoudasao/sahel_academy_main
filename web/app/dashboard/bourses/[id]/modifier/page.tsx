@@ -45,7 +45,6 @@ export default function ModifierBoursePage({ params }: { params: Promise<{ id: s
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [loadedChampIds, setLoadedChampIds] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     titre: "",
@@ -111,7 +110,6 @@ export default function ModifierBoursePage({ params }: { params: Promise<{ id: s
           cle: c.cle ?? undefined,
         }));
         setChamps(cs);
-        setLoadedChampIds(cs.map((c) => c.id));
       } catch {
         setNotFound(true);
       } finally {
@@ -224,12 +222,8 @@ export default function ModifierBoursePage({ params }: { params: Promise<{ id: s
         formationId: form.formationId || undefined,
         departementId: form.departementId || undefined,
         dateLimite: form.dateLimite ? new Date(form.dateLimite).toISOString() : undefined,
-      });
-      // Réconcilie les champs : supprime les anciens puis recrée l'état courant
-      await Promise.all(loadedChampIds.map((cid) => boursesApi.removeChamp(id, cid).catch(() => {})));
-      for (let i = 0; i < champs.length; i++) {
-        const c = champs[i];
-        await boursesApi.addChamp(id, {
+        // Formulaire remplacé en bloc, de façon atomique côté serveur.
+        champs: champs.map((c, i) => ({
           label: c.label,
           type: c.type,
           obligatoire: c.obligatoire,
@@ -237,8 +231,8 @@ export default function ModifierBoursePage({ params }: { params: Promise<{ id: s
           aide: c.aide,
           cle: c.cle,
           ordre: i,
-        });
-      }
+        })),
+      });
       setSaved(true);
       setTimeout(() => router.push("/dashboard/bourses"), 800);
     } catch (err) {
