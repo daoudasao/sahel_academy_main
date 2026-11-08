@@ -1,3 +1,4 @@
+import 'core/config/app_version.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -11,6 +12,7 @@ import 'firebase_options.dart';
 Future<void> main() async {
   // Nécessaire avant tout appel asynchrone au démarrage.
   WidgetsFlutterBinding.ensureInitialized();
+  await AppVersion.init();
 
   // Web : URLs propres sans # (no-op sur mobile/desktop).
   configurerUrlStrategy();

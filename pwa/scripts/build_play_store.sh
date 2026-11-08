@@ -5,6 +5,9 @@
 #
 # Avant chaque nouvelle version : augmenter `version:` dans pubspec.yaml
 # (le nombre après le « + » doit toujours monter, Google refuse sinon).
+#
+# ⚠ Ce script produit une version NON patchable par Shorebird. Pour une version
+# destinée au store, utiliser ./scripts/shorebird.sh release (voir SHOREBIRD.md).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

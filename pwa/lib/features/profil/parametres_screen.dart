@@ -258,9 +258,9 @@ class _ParametresScreenState extends State<ParametresScreen> {
           const Divider(height: 24),
 
           _enTeteSection(context, 'À propos'),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('Version de l\'application', style: TextStyle(fontWeight: FontWeight.w700)),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Version de l\'application', style: TextStyle(fontWeight: FontWeight.w700)),
             subtitle: Text(AppVersion.label),
           ),
           ListTile(

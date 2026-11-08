@@ -116,7 +116,7 @@ class AppInstallService {
         'deviceFingerprint': fingerprint,
         'plateforme': _getPlateforme(),
         'typeInstallation': _getTypeInstallation(),
-        'appVersion': AppVersion.version,
+        'appVersion': AppVersion.full,
         'deviceModel': _getDeviceModel(),
       };
 
