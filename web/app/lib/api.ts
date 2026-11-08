@@ -174,6 +174,7 @@ export const supportApi = {
   getConversation: (userId: string) => api.get<any[]>(`/support/conversations/${userId}`),
   sendMessage: (userId: string, data: { contenu: string; type?: string; audioUrl?: string; dureeSeconds?: number }) =>
     api.post<any>(`/support/conversations/${userId}/messages`, data),
+  markUnread: (userId: string) => api.patch<any>(`/support/conversations/${userId}/non-lu`, {}),
   updateMessage: (id: string, contenu: string) => api.patch<any>(`/support/messages/${id}`, { contenu }),
   deleteMessage: (id: string) => api.del<any>(`/support/messages/${id}`),
 };

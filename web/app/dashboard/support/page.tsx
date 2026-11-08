@@ -60,26 +60,26 @@ export type SupportConversationDto = {
   unreadCount: number;
 };
 
-type TicketStatus = "open" | "closed" | "pending";
+type TicketStatus = "unread" | "toreply" | "answered";
 
 const STATUS_CONFIG: Record<
   TicketStatus,
   { label: string; dot: string; badge: string }
 > = {
-  open: {
-    label: "Ouvert",
-    dot: "bg-emerald-500",
-    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  unread: {
+    label: "Non lue",
+    dot: "bg-purple-500",
+    badge: "bg-purple-50 text-purple-700 border-purple-200",
   },
-  pending: {
-    label: "En attente",
+  toreply: {
+    label: "À répondre",
     dot: "bg-amber-500",
     badge: "bg-amber-50 text-amber-700 border-amber-200",
   },
-  closed: {
-    label: "Résolu",
-    dot: "bg-slate-400",
-    badge: "bg-slate-100 text-slate-600 border-slate-200",
+  answered: {
+    label: "Répondue",
+    dot: "bg-emerald-500",
+    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
   },
 };
 
@@ -87,9 +87,9 @@ type FilterKey = "all" | TicketStatus;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "Toutes" },
-  { key: "open", label: "Ouvertes" },
-  { key: "pending", label: "En attente" },
-  { key: "closed", label: "Résolues" },
+  { key: "unread", label: "Non lues" },
+  { key: "toreply", label: "À répondre" },
+  { key: "answered", label: "Répondues" },
 ];
 
 function formatTime(dateIso: string): string {
@@ -161,7 +161,6 @@ export default function SupportPage() {
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Statuts de résolution gérés localement
-  const [closedUserIds, setClosedUserIds] = useState<Record<string, boolean>>({});
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -350,37 +349,24 @@ export default function SupportPage() {
     [conversations, activeUserId]
   );
 
-  // Déterminer le statut virtuel de la conversation
+  // Statut déduit des messages : non lue (jamais ouverte), à répondre
+  // (le dernier mot est au client) ou répondue (le dernier mot est au support).
   const getTicketStatus = useCallback(
     (c: SupportConversationDto): TicketStatus => {
-      if (closedUserIds[c.id]) return "closed";
-      if (c.unreadCount > 0) return "open";
-      if (c.lastMessage?.expediteur === "client") return "pending";
-      return "open";
+      if (c.unreadCount > 0) return "unread";
+      if (c.lastMessage?.expediteur === "client") return "toreply";
+      return "answered";
     },
-    [closedUserIds]
+    []
   );
 
-  // Statistiques globales
+  // Statistiques globales (toutes en nombre de conversations)
   const stats = useMemo(() => {
-    const total = conversations.length;
-    let openCount = 0;
-    let pendingCount = 0;
-    let unreadTotal = 0;
-
+    const counts = { total: conversations.length, unread: 0, toreply: 0, answered: 0 };
     conversations.forEach((c) => {
-      const st = getTicketStatus(c);
-      if (st === "open") openCount++;
-      if (st === "pending") pendingCount++;
-      unreadTotal += c.unreadCount || 0;
+      counts[getTicketStatus(c)]++;
     });
-
-    return {
-      total,
-      open: openCount,
-      pending: pendingCount,
-      unread: unreadTotal,
-    };
+    return counts;
   }, [conversations, getTicketStatus]);
 
   const startEdit = (msg: SupportMessageDto) => {
@@ -447,10 +433,6 @@ export default function SupportPage() {
         )
       );
 
-      // Si le ticket était fermé, le rouvrir automatiquement
-      if (closedUserIds[activeUserId]) {
-        setClosedUserIds((prev) => ({ ...prev, [activeUserId]: false }));
-      }
     } catch (err: any) {
       alert("Erreur lors de l'envoi du message : " + (err.message || "Erreur serveur"));
     } finally {
@@ -625,9 +607,6 @@ export default function SupportPage() {
         )
       );
 
-      if (closedUserIds[activeUserId]) {
-        setClosedUserIds((prev) => ({ ...prev, [activeUserId]: false }));
-      }
 
       cancelRecording();
     } catch (err: any) {
@@ -637,12 +616,24 @@ export default function SupportPage() {
     }
   };
 
-  const toggleResolve = () => {
+  // Remet la conversation en « non lue » puis la ferme, pour qu'elle ne soit
+  // pas aussitôt re-marquée comme lue par la lecture automatique.
+  const markAsUnread = async () => {
     if (!activeUserId) return;
-    setClosedUserIds((prev) => ({
-      ...prev,
-      [activeUserId]: !prev[activeUserId],
-    }));
+    const id = activeUserId;
+    try {
+      await supportApi.markUnread(id);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === id && c.lastMessage?.expediteur === "client"
+            ? { ...c, unreadCount: Math.max(1, c.unreadCount) }
+            : c
+        )
+      );
+      setActiveUserId(null);
+    } catch (err: any) {
+      alert("Impossible de marquer comme non lu : " + (err.message || "Erreur serveur"));
+    }
   };
 
   // Filtrage des conversations
@@ -691,7 +682,7 @@ export default function SupportPage() {
           {stats.unread > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-xs font-medium backdrop-blur-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              {stats.unread} message{stats.unread > 1 ? "s" : ""} non lu{stats.unread > 1 ? "s" : ""}
+              {stats.unread} conversation{stats.unread > 1 ? "s" : ""} non lue{stats.unread > 1 ? "s" : ""}
             </div>
           )}
         </div>
@@ -701,9 +692,9 @@ export default function SupportPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: "Conversations", value: stats.total, icon: MessageSquare, color: "text-blue-600", hint: "Total des fils de discussion" },
-          { label: "Ouvertes", value: stats.open, icon: Inbox, color: "text-emerald-600", hint: "Demandes en cours" },
-          { label: "En attente", value: stats.pending, icon: Clock, color: "text-amber-600", hint: "Attente de réponse admin" },
-          { label: "Non lus", value: stats.unread, icon: CheckCircle2, color: "text-purple-600", hint: "Messages étudiants non consultés" },
+          { label: "Non lues", value: stats.unread, icon: Inbox, color: "text-purple-600", hint: "Conversations jamais ouvertes" },
+          { label: "À répondre", value: stats.toreply, icon: Clock, color: "text-amber-600", hint: "Le client attend une réponse" },
+          { label: "Répondues", value: stats.answered, icon: CheckCircle2, color: "text-emerald-600", hint: "Le support a eu le dernier mot" },
         ].map((s) => (
           <div key={s.label} className="rounded-xl border bg-card text-card-foreground shadow-sm bg-white p-3.5 sm:p-5 flex flex-col justify-between">
             <div>
@@ -777,6 +768,9 @@ export default function SupportPage() {
                     }`}
                   >
                     {f.label}
+                    <span className="ml-1 opacity-70">
+                      {f.key === "all" ? stats.total : stats[f.key]}
+                    </span>
                   </button>
                 );
               })}
@@ -914,15 +908,13 @@ export default function SupportPage() {
                   <RefreshCw className={`w-4 h-4 ${loadingMessages ? "animate-spin" : ""}`} />
                 </button>
                 <button
-                  onClick={toggleResolve}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 ${
-                    closedUserIds[activeConversation.id]
-                      ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                      : "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
-                  }`}
+                  onClick={markAsUnread}
+                  disabled={activeConversation.lastMessage?.expediteur !== "client"}
+                  title="Remettre la conversation en non lue"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-900/60 hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{closedUserIds[activeConversation.id] ? "Rouvrir" : "Résoudre"}</span>
+                  <Mail className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Marquer non lu</span>
                 </button>
                 <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                   <MoreVertical className="w-5 h-5" />

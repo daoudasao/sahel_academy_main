@@ -133,15 +133,38 @@ export class SupportService {
       },
     });
 
-    return users.map((u) => ({
-      id: u.id,
-      nom: u.nom,
-      email: u.email,
-      telephone: u.telephone,
-      image: u.image,
-      lastMessage: u.supportMessages[0] || null,
-      unreadCount: u._count.supportMessages,
-    }));
+    return users
+      .map((u) => ({
+        id: u.id,
+        nom: u.nom,
+        email: u.email,
+        telephone: u.telephone,
+        image: u.image,
+        lastMessage: u.supportMessages[0] || null,
+        unreadCount: u._count.supportMessages,
+      }))
+      // Conversations les plus récentes en premier.
+      .sort(
+        (a, b) =>
+          (b.lastMessage?.createdAt.getTime() ?? 0) -
+          (a.lastMessage?.createdAt.getTime() ?? 0),
+      );
+  }
+
+  /// Remet la conversation « à traiter » : le dernier message du client
+  /// redevient non lu (sans effet si le client n'a rien écrit).
+  async markUnread(userId: string) {
+    const dernier = await this.prisma.supportMessage.findFirst({
+      where: { userId, expediteur: ExpediteurSupport.client },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (!dernier) return { unreadCount: 0 };
+    await this.prisma.supportMessage.update({
+      where: { id: dernier.id },
+      data: { lu: false },
+    });
+    return { unreadCount: 1 };
   }
 
   async getConversation(userId: string) {

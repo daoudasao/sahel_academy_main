@@ -70,6 +70,13 @@ export class SupportController {
   }
 
   @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT)
+  @SkipAudit()
+  @Patch('conversations/:userId/non-lu')
+  markUnread(@Param('userId') userId: string) {
+    return this.supportService.markUnread(userId);
+  }
+
+  @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.SUPPORT)
   @Get('conversations/:userId')
   getConversation(@Param('userId') userId: string) {
     return this.supportService.getConversation(userId);
