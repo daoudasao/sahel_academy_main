@@ -241,6 +241,28 @@ export const signalementsApi = {
     api.patch<Signalement>(`/signalements/${id}`, data),
 };
 
+// ─── Corbeille (éléments supprimés, restaurables) ───
+
+export type TypeCorbeille = "bourse" | "formation" | "centre" | "departement" | "actualite";
+
+export interface ElementCorbeille {
+  type: TypeCorbeille;
+  id: string;
+  titre: string;
+  detail: string | null;
+  deletedAt: string;
+  deletedByNom: string | null;
+}
+
+export const corbeilleApi = {
+  list: () => api.get<ElementCorbeille[]>("/corbeille"),
+  restaurer: (type: TypeCorbeille, id: string) =>
+    api.post<unknown>(`/corbeille/${type}/${encodeURIComponent(id)}/restaurer`),
+  /** SUPER_ADMIN uniquement : efface pour de bon (avec les données liées). */
+  supprimerDefinitivement: (type: TypeCorbeille, id: string) =>
+    api.del<unknown>(`/corbeille/${type}/${encodeURIComponent(id)}`),
+};
+
 export const rolesApi = {
   list: () => api.get<any[]>("/roles"),
   getPermissionsMatrix: () => api.get<any>("/roles/permissions"),

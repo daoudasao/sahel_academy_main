@@ -510,7 +510,7 @@ export default function BoursesPage() {
                           type="button"
                           onClick={() => setDeleteModal({ open: true, bourseId: b.id, bourseTitre: b.titre })}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition cursor-pointer"
-                          title="Supprimer définitivement cette bourse"
+                          title="Supprimer cette bourse"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Supprimer</span>
@@ -663,7 +663,7 @@ export default function BoursesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal confirmation suppression définitive bourse */}
+      {/* Modal confirmation suppression bourse (corbeille) */}
       <Dialog
         open={deleteModal.open}
         onOpenChange={(open) => {
@@ -679,17 +679,17 @@ export default function BoursesPage() {
               Supprimer la bourse
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 leading-relaxed pt-1">
-              Êtes-vous sûr de vouloir supprimer définitivement l&apos;offre de bourse &quot;<strong>{deleteModal.bourseTitre}</strong>&quot; ?
+              Êtes-vous sûr de vouloir supprimer l&apos;offre de bourse &quot;<strong>{deleteModal.bourseTitre}</strong>&quot; ?
             </DialogDescription>
           </DialogHeader>
 
           <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-xl text-xs text-rose-800 space-y-1 my-2">
             <p className="font-semibold flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>Action irréversible</span>
+              <span>Envoyée dans la Corbeille</span>
             </p>
             <p className="text-[11px] text-rose-700 leading-normal pl-5.5">
-              Toutes les candidatures reçues ainsi que la configuration des champs du formulaire associés à cette bourse seront également supprimées de la base de données.
+              La bourse disparaît du site et de l&apos;application. Ses candidatures et son formulaire sont conservés : vous pourrez la restaurer depuis la Corbeille.
             </p>
           </div>
 

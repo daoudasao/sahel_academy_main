@@ -7,6 +7,7 @@ import { TypeMedia, TypeNotification } from '@prisma/client';
 import { ActualitesGateway } from './actualites.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { auteurDeCommentaire } from '../auth/roles.util';
+import { NON_SUPPRIME, versCorbeille } from '../corbeille/corbeille.util';
 
 @Injectable()
 export class ActualitesService {
@@ -71,6 +72,7 @@ export class ActualitesService {
 
   async findAll() {
     return this.prisma.post.findMany({
+      where: NON_SUPPRIME,
       orderBy: { createdAt: 'desc' },
       include: {
         medias: true,
@@ -88,8 +90,8 @@ export class ActualitesService {
   }
 
   async findOne(id: string) {
-    const post = await this.prisma.post.findUnique({
-      where: { id },
+    const post = await this.prisma.post.findFirst({
+      where: { id, ...NON_SUPPRIME },
       include: {
         medias: true,
         actions: true,
@@ -108,7 +110,7 @@ export class ActualitesService {
     const { medias: _medias, actions: _actions, ...postData } = updatePostDto;
     try {
       const updated = await this.prisma.post.update({
-        where: { id },
+        where: { id, ...NON_SUPPRIME },
         data: postData,
         include: {
           medias: true,
@@ -127,10 +129,12 @@ export class ActualitesService {
     }
   }
 
-  async remove(id: string) {
+  /** Envoie la publication à la corbeille (médias et commentaires conservés). */
+  async remove(id: string, user?: Parameters<typeof versCorbeille>[0]) {
     try {
-      const deleted = await this.prisma.post.delete({
-        where: { id },
+      const deleted = await this.prisma.post.update({
+        where: { id, ...NON_SUPPRIME },
+        data: versCorbeille(user),
       });
       this.actualitesGateway.emitPostDeleted(id);
       return deleted;
@@ -142,7 +146,7 @@ export class ActualitesService {
   async like(id: string) {
     try {
       const updated = await this.prisma.post.update({
-        where: { id },
+        where: { id, ...NON_SUPPRIME },
         data: { likes: { increment: 1 } },
       });
       this.actualitesGateway.emitPostLiked(id, updated.likes);
@@ -154,7 +158,7 @@ export class ActualitesService {
 
   async unlike(id: string) {
     try {
-      const post = await this.prisma.post.findUnique({ where: { id } });
+      const post = await this.prisma.post.findFirst({ where: { id, ...NON_SUPPRIME } });
       if (!post) throw new NotFoundException('Post non trouvé');
       const newLikes = Math.max(0, post.likes - 1);
       const updated = await this.prisma.post.update({
@@ -180,8 +184,8 @@ export class ActualitesService {
     dto: CreateCommentaireDto,
     user: Parameters<typeof auteurDeCommentaire>[0] & { id: string },
   ) {
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, ...NON_SUPPRIME },
       select: { id: true },
     });
     if (!post) throw new NotFoundException('Post non trouvé');

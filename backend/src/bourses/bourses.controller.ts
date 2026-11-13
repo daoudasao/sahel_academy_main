@@ -127,8 +127,8 @@ export class BoursesController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.CHEF_CENTRE)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.boursesService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: User | null) {
+    return this.boursesService.remove(id, user);
   }
 
   @ApiBearerAuth('access-token')

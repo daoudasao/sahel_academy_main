@@ -633,7 +633,7 @@ export default function DepartementsPage() {
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm text-slate-600 pt-2 leading-relaxed">
               Êtes-vous sûr de vouloir supprimer ce pôle ?<br />
-              Cette action est <strong className="text-red-600">irréversible</strong> et pourra désorganiser l'association des formations rattachées.
+              Il sera envoyé dans la Corbeille (restaurable). Un département qui contient encore des formations ne peut pas être supprimé.
             </DialogDescription>
           </DialogHeader>
 

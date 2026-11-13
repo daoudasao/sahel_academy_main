@@ -6,6 +6,7 @@ import { StatutFormation } from '@prisma/client';
 import { SupportService } from '../support/support.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaiementsService } from '../paiements/paiements.service';
+import { NON_SUPPRIME, versCorbeille } from '../corbeille/corbeille.util';
 
 /** Seuls champs du formateur visibles publiquement. */
 const FORMATEUR_PUBLIC = {
@@ -43,6 +44,7 @@ export class FormationsService {
       where: {
         ...(departementId && { departementId }),
         ...(statut && { statut }),
+        ...NON_SUPPRIME,
       },
       include: {
         departement: true,
@@ -60,8 +62,8 @@ export class FormationsService {
    */
   async findOne(id: string, pourEquipe = false) {
     const formation = pourEquipe
-      ? await this.prisma.formation.findUnique({
-          where: { id },
+      ? await this.prisma.formation.findFirst({
+          where: { id, ...NON_SUPPRIME },
           include: {
             departement: true,
             formateur: true,
@@ -69,8 +71,8 @@ export class FormationsService {
             demandesInscriptions: { include: { user: true } },
           },
         })
-      : await this.prisma.formation.findUnique({
-          where: { id },
+      : await this.prisma.formation.findFirst({
+          where: { id, ...NON_SUPPRIME },
           include: {
             departement: true,
             formateur: { select: FORMATEUR_PUBLIC },
@@ -84,7 +86,7 @@ export class FormationsService {
   async update(id: string, updateFormationDto: UpdateFormationDto) {
     try {
       return await this.prisma.formation.update({
-        where: { id },
+        where: { id, ...NON_SUPPRIME },
         data: updateFormationDto,
       });
     } catch (e) {
@@ -92,10 +94,15 @@ export class FormationsService {
     }
   }
 
-  async remove(id: string) {
+  /**
+   * Envoie la formation à la corbeille. Inscriptions, échéances et paiements
+   * restent en base : une restauration remet tout en place.
+   */
+  async remove(id: string, user?: Parameters<typeof versCorbeille>[0]) {
     try {
-      return await this.prisma.formation.delete({
-        where: { id },
+      return await this.prisma.formation.update({
+        where: { id, ...NON_SUPPRIME },
+        data: versCorbeille(user),
       });
     } catch (e) {
       throw new NotFoundException('Formation non trouvée');
@@ -106,7 +113,7 @@ export class FormationsService {
 
   /// Un élève signale son intérêt pour rejoindre une formation.
   async creerDemande(formationId: string, userId: string) {
-    const formation = await this.prisma.formation.findUnique({ where: { id: formationId } });
+    const formation = await this.prisma.formation.findFirst({ where: { id: formationId, ...NON_SUPPRIME } });
     if (!formation) throw new NotFoundException('Formation non trouvée');
 
     const demande = await this.prisma.demandeInscription.upsert({
@@ -132,7 +139,7 @@ export class FormationsService {
   /// Obtenir les demandes d'inscription d'un utilisateur donné
   async getDemandesForUser(userId: string) {
     return this.prisma.demandeInscription.findMany({
-      where: { userId },
+      where: { userId, formation: NON_SUPPRIME },
       include: {
         formation: true,
       },
@@ -143,6 +150,7 @@ export class FormationsService {
   /// Obtenir toutes les demandes d'inscription pour l'administrateur
   async getDemandes() {
     return this.prisma.demandeInscription.findMany({
+      where: { formation: NON_SUPPRIME },
       include: {
         user: true,
         formation: true,

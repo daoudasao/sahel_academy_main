@@ -104,8 +104,8 @@ export class FormationsController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.CHEF_CENTRE, Role.RESPONSABLE_PEDAGOGIQUE)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.formationsService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: User | null) {
+    return this.formationsService.remove(id, user);
   }
 
   // ─── Soumission de demande par l'élève ───

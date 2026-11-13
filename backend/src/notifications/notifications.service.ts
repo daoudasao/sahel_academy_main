@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Notification, Prisma } from '@prisma/client';
+import { NON_SUPPRIME } from '../corbeille/corbeille.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationsGateway } from './notifications.gateway';
@@ -92,6 +93,7 @@ export class NotificationsService {
       where: {
         montantPaye: { lte: 0 },
         dateEcheance: { lt: debutDuJour },
+        formation: NON_SUPPRIME,
         ...(data.cibleId ? { formationId: data.cibleId } : {}),
       },
       select: { userId: true },
@@ -327,6 +329,7 @@ export class NotificationsService {
         where: {
           userId,
           dateEcheance: { lt: debutDuJour },
+          formation: NON_SUPPRIME,
         },
         include: { formation: true },
         orderBy: { dateEcheance: 'asc' },
@@ -365,6 +368,7 @@ export class NotificationsService {
         where: {
           userId,
           statut: { in: ['admis', 'refuse'] },
+          bourse: NON_SUPPRIME,
         },
         include: { bourse: true, user: true },
         orderBy: { updatedAt: 'desc' },

@@ -413,7 +413,7 @@ export default function FormationsPage() {
               Supprimer la formation
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm text-slate-600 pt-2">
-              Êtes-vous sûr de vouloir supprimer définitivement cette formation ? Cette action est irréversible.
+              La formation sera retirée du site et de l&apos;application, et envoyée dans la Corbeille. Ses inscriptions et paiements sont conservés : vous pourrez la restaurer à tout moment.
             </DialogDescription>
           </DialogHeader>
 
@@ -430,7 +430,7 @@ export default function FormationsPage() {
               onClick={confirmDelete}
               disabled={submitting}
             >
-              {submitting ? "Suppression..." : "Supprimer définitivement"}
+              {submitting ? "Suppression..." : "Supprimer"}
             </button>
           </DialogFooter>
         </DialogContent>

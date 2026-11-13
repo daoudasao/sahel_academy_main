@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Role, TypeNotification } from '@prisma/client';
+import { NON_SUPPRIME } from '../corbeille/corbeille.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { CreateCommentaireClasseDto } from './dto/create-commentaire.dto';
@@ -74,8 +75,8 @@ export class ClassesService {
     user: Utilisateur,
     ecriture = false,
   ) {
-    const formation = await this.prisma.formation.findUnique({
-      where: { id: formationId },
+    const formation = await this.prisma.formation.findFirst({
+      where: { id: formationId, ...NON_SUPPRIME },
       select: { formateur: { select: { userId: true } } },
     });
     if (!formation) throw new NotFoundException('Classe non trouvée');
@@ -378,7 +379,7 @@ export class ClassesService {
 
     const formationsEnseignees = formateur
       ? await this.prisma.formation.findMany({
-          where: { formateurId: formateur.id },
+          where: { formateurId: formateur.id, ...NON_SUPPRIME },
           include: {
             departement: true,
             formateur: { select: FORMATEUR_PUBLIC },
@@ -391,6 +392,7 @@ export class ClassesService {
       where: {
         userId: user.id,
         statut: { notIn: ['suspendu', 'abandonne'] },
+        formation: NON_SUPPRIME,
       },
       include: {
         formation: {

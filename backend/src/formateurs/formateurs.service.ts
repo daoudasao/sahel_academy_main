@@ -5,6 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { Prisma, Role } from '@prisma/client';
+import { NON_SUPPRIME } from '../corbeille/corbeille.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { definirMotDePasse } from '../auth/mot-de-passe';
 import { CreateCompteFormateurDto } from './dto/create-compte-formateur.dto';
@@ -71,12 +72,13 @@ export class FormateursService {
     const formateurs = await this.prisma.formateur.findMany({
       include: {
         formations: {
+          where: NON_SUPPRIME,
           include: {
             echeances: true,
           },
         },
         _count: {
-          select: { formations: true },
+          select: { formations: { where: NON_SUPPRIME } },
         },
       },
     });

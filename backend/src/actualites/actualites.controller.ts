@@ -58,8 +58,8 @@ export class ActualitesController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.CHEF_CENTRE, Role.FORMATEUR, Role.STAFF, Role.COMMUNITY_MANAGER)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.actualitesService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: User | null) {
+    return this.actualitesService.remove(id, user);
   }
 
   @ApiBearerAuth('access-token')

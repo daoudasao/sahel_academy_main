@@ -81,6 +81,8 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
     "SUPPORT",
   ],
   "/dashboard/installations": ["CHEF_CENTRE", "SUPER_ADMIN", "STAFF"],
+  // Doit rester aligné sur CorbeilleController (backend/src/corbeille)
+  "/dashboard/corbeille": ["CHEF_CENTRE", "SUPER_ADMIN"],
   "/dashboard/parametres": ["CHEF_CENTRE", "SUPER_ADMIN", "STAFF"],
 };
 

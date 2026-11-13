@@ -19,6 +19,7 @@ import { CreateChampDto } from './dto/create-champ.dto';
 import { CreateCandidatureDto } from './dto/create-candidature.dto';
 import { UpdateCandidatureDto } from './dto/update-candidature.dto';
 import { nomDe } from '../auth/roles.util';
+import { NON_SUPPRIME, versCorbeille } from '../corbeille/corbeille.util';
 
 /**
  * Champs réservés aux admis (message et document d'admission) : ils ne
@@ -90,7 +91,7 @@ export class BoursesService {
 
     try {
       return await this.prisma.bourse.findMany({
-        where: filtreStatut,
+        where: { ...filtreStatut, ...NON_SUPPRIME },
         omit: pourEquipe ? undefined : CHAMPS_ADMISSION,
         include: {
           formation: true,
@@ -129,9 +130,9 @@ export class BoursesService {
     const omit = options.avecCandidatures ? undefined : CHAMPS_ADMISSION;
 
     const bourse =
-      (await this.prisma.bourse.findUnique({ where: { id }, include, omit })) ??
+      (await this.prisma.bourse.findFirst({ where: { id, ...NON_SUPPRIME }, include, omit })) ??
       (await this.prisma.bourse.findFirst({
-        where: { formationId: id },
+        where: { formationId: id, ...NON_SUPPRIME },
         include,
         omit,
       }));
@@ -158,7 +159,7 @@ export class BoursesService {
     // formulaire à moitié vidé).
     const { champs, ...data } = updateBourseDto;
 
-    const ancienneBourse = await this.prisma.bourse.findUnique({ where: { id } });
+    const ancienneBourse = await this.prisma.bourse.findFirst({ where: { id, ...NON_SUPPRIME } });
     if (!ancienneBourse) throw new NotFoundException('Bourse non trouvée');
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -202,9 +203,13 @@ export class BoursesService {
     return updated;
   }
 
-  async remove(id: string) {
+  /** Envoie la bourse à la corbeille (restaurable, candidatures conservées). */
+  async remove(id: string, user?: Parameters<typeof versCorbeille>[0]) {
     try {
-      return await this.prisma.bourse.delete({ where: { id } });
+      return await this.prisma.bourse.update({
+        where: { id, ...NON_SUPPRIME },
+        data: versCorbeille(user),
+      });
     } catch {
       throw new NotFoundException('Bourse non trouvée');
     }
@@ -243,7 +248,7 @@ export class BoursesService {
   // et le gabarit de message d'admission est interpolé avec les données du candidat.
   async getCandidaturesForUser(userId: string) {
     const candidatures = await this.prisma.candidature.findMany({
-      where: { userId },
+      where: { userId, bourse: NON_SUPPRIME },
       include: {
         bourse: { include: { formation: true } },
         user: true,

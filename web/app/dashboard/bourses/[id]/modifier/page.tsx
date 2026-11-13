@@ -712,7 +712,7 @@ export default function ModifierBoursePage({ params }: { params: Promise<{ id: s
           )}
         </form>
 
-        {/* Modal confirmation suppression définitive bourse */}
+        {/* Modal confirmation suppression bourse (corbeille) */}
         <Dialog
           open={showDeleteModal}
           onOpenChange={(open) => {
@@ -728,14 +728,14 @@ export default function ModifierBoursePage({ params }: { params: Promise<{ id: s
                 Supprimer la bourse
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-500 leading-relaxed pt-1">
-                Êtes-vous sûr de vouloir supprimer définitivement l&apos;offre &quot;<strong>{form.titre || "cette bourse"}</strong>&quot; ?
+                Êtes-vous sûr de vouloir supprimer l&apos;offre &quot;<strong>{form.titre || "cette bourse"}</strong>&quot; ?
               </DialogDescription>
             </DialogHeader>
 
             <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-xl text-xs text-rose-800 space-y-1 my-2">
-              <p className="font-semibold">Action irréversible</p>
+              <p className="font-semibold">Envoyée dans la Corbeille</p>
               <p className="text-[11px] text-rose-700 leading-normal">
-                Toutes les candidatures et la configuration des champs associées seront définitivement supprimées.
+                La bourse disparaît du site et de l&apos;application. Ses candidatures et son formulaire sont conservés : vous pourrez la restaurer depuis la Corbeille.
               </p>
             </div>
 

@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateCentreDto } from './dto/create-centre.dto';
 import { UpdateCentreDto } from './dto/update-centre.dto';
 import { CreateCreneauDto } from './dto/create-creneau.dto';
+import { NON_SUPPRIME, versCorbeille } from '../corbeille/corbeille.util';
 
 @Injectable()
 export class CentresService {
@@ -17,6 +18,7 @@ export class CentresService {
 
   async findAll() {
     return this.prisma.centre.findMany({
+      where: NON_SUPPRIME,
       include: {
         creneaux: { orderBy: { dateHeure: 'asc' } },
       },
@@ -24,8 +26,8 @@ export class CentresService {
   }
 
   async findOne(id: string) {
-    const centre = await this.prisma.centre.findUnique({
-      where: { id },
+    const centre = await this.prisma.centre.findFirst({
+      where: { id, ...NON_SUPPRIME },
       include: { creneaux: { orderBy: { dateHeure: 'asc' } } },
     });
     if (!centre) throw new NotFoundException('Centre non trouvé');
@@ -35,7 +37,7 @@ export class CentresService {
   async update(id: string, updateCentreDto: UpdateCentreDto) {
     try {
       return await this.prisma.centre.update({
-        where: { id },
+        where: { id, ...NON_SUPPRIME },
         data: updateCentreDto,
         include: { creneaux: true },
       });
@@ -44,9 +46,13 @@ export class CentresService {
     }
   }
 
-  async remove(id: string) {
+  /** Envoie le centre à la corbeille (créneaux conservés). */
+  async remove(id: string, user?: Parameters<typeof versCorbeille>[0]) {
     try {
-      return await this.prisma.centre.delete({ where: { id } });
+      return await this.prisma.centre.update({
+        where: { id, ...NON_SUPPRIME },
+        data: versCorbeille(user),
+      });
     } catch {
       throw new NotFoundException('Centre non trouvé');
     }

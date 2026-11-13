@@ -5,6 +5,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { NON_SUPPRIME } from '../corbeille/corbeille.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { definirMotDePasse } from '../auth/mot-de-passe';
 import { PaiementsService } from '../paiements/paiements.service';
@@ -167,7 +168,7 @@ export class UsersService {
 
   async getInscriptions(id: string) {
     return this.prisma.inscription.findMany({
-      where: { userId: id },
+      where: { userId: id, formation: NON_SUPPRIME },
       include: { formation: true },
     });
   }
@@ -226,7 +227,7 @@ export class UsersService {
 
   async getCandidatures(userId: string) {
     return this.prisma.candidature.findMany({
-      where: { userId },
+      where: { userId, bourse: NON_SUPPRIME },
       include: { bourse: true },
     });
   }

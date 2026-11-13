@@ -540,7 +540,7 @@ export default function CentresPage() {
             <DialogDescription className="mt-2 text-sm text-slate-600 leading-relaxed">
               Êtes-vous sûr de vouloir supprimer le centre <strong>&ldquo;{deletingName}&rdquo;</strong> ?<br />
               <span className="text-red-600 text-xs mt-2 block font-medium">
-                ⚠️ Cette action est irréversible et supprimera également l&apos;ensemble des créneaux associés.
+                Le centre et ses créneaux seront envoyés dans la Corbeille ; vous pourrez les restaurer à tout moment.
               </span>
             </DialogDescription>
           </DialogHeader>

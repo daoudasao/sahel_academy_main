@@ -24,6 +24,7 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { AuditModule } from './audit/audit.module';
 import { SignalementsModule } from './signalements/signalements.module';
 import { AppInstallsModule } from './app-installs/app-installs.module';
+import { CorbeilleModule } from './corbeille/corbeille.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { AppInstallsModule } from './app-installs/app-installs.module';
     FirebaseModule,
     SignalementsModule,
     AppInstallsModule,
+    CorbeilleModule,
   ],
   controllers: [AppController],
   providers: [

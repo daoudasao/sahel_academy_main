@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { NON_SUPPRIME } from '../corbeille/corbeille.util';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** Pourcentage appliqué quand la formation n'en définit pas. */
@@ -44,7 +45,7 @@ export class EspaceFormateurService {
 
     const [formations, fiches] = await Promise.all([
       this.prisma.formation.findMany({
-        where: { formateurId: formateur.id },
+        where: { formateurId: formateur.id, ...NON_SUPPRIME },
         select: {
           id: true,
           titre: true,
@@ -151,8 +152,8 @@ export class EspaceFormateurService {
   /** Apprenants d'une classe du formateur (sans coordonnées ni paiements). */
   async apprenants(userId: string, formationId: string) {
     const formateur = await this.formateurDuCompte(userId);
-    const formation = await this.prisma.formation.findUnique({
-      where: { id: formationId },
+    const formation = await this.prisma.formation.findFirst({
+      where: { id: formationId, ...NON_SUPPRIME },
       select: { formateurId: true },
     });
     if (!formation) throw new NotFoundException('Classe introuvable.');

@@ -17,6 +17,8 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import type { User } from '@prisma/client';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('centres')
 @ApiBearerAuth('access-token')
@@ -49,8 +51,8 @@ export class CentresController {
 
   @Roles(Role.CHEF_CENTRE, Role.RESPONSABLE_PEDAGOGIQUE)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.centresService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: User | null) {
+    return this.centresService.remove(id, user);
   }
 
   // ─── Créneaux ───
