@@ -166,6 +166,14 @@ export default function SupportPage() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
+  // Ouverture directe d'une discussion via ?user=<id> (ex. depuis « Demandes d'inscription »).
+  // Déclaré avant le chargement des conversations pour que la sélection automatique
+  // de la 1re conversation ne prenne pas le dessus.
+  useEffect(() => {
+    const userParam = new URLSearchParams(window.location.search).get("user");
+    if (userParam) setActiveUserId(userParam);
+  }, []);
+
   // Nettoyage lors du démontage ou changement d'URL de prévisualisation
   useEffect(() => {
     return () => {
