@@ -178,7 +178,11 @@ export class SupportService {
     });
   }
 
-  async sendAsSupport(userId: string, dto: CreateSupportMessageDto) {
+  async sendAsSupport(
+    userId: string,
+    dto: CreateSupportMessageDto,
+    options: { notifier?: boolean } = {},
+  ) {
     const msg = await this.prisma.supportMessage.create({
       data: {
         userId,
@@ -192,6 +196,7 @@ export class SupportService {
       },
     });
     this.supportGateway.emitNewMessage(userId, msg);
+    if (options.notifier === false) return msg;
 
     // Envoi de la notification push FCM
     try {

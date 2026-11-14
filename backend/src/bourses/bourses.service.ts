@@ -396,19 +396,21 @@ export class BoursesService {
             documentNom = candidature.bourse.documentAdmissionNom || 'Document_Admission.pdf';
           }
 
-          // Envoi automatique dans le CHAT SUPPORT de l'utilisateur
+          // Envoi automatique dans le CHAT SUPPORT de l'utilisateur.
+          // Le texte et le document partent en deux messages distincts : la bulle
+          // « document » de l'app n'affiche pas le contenu texte.
           try {
-            let messageChatSupport = message;
-            if (documentUrl) {
-              messageChatSupport += `\n\n📄 Document joint d'admission : ${documentNom}\n${documentUrl}`;
-            }
-
             await this.supportService.sendAsSupport(candidature.userId, {
-              contenu: messageChatSupport,
-              type: documentUrl ? 'document' : 'texte',
-              documentUrl,
-              documentNom,
+              contenu: message,
+              type: 'texte',
             });
+            if (documentUrl) {
+              await this.supportService.sendAsSupport(
+                candidature.userId,
+                { contenu: documentNom ?? '', type: 'document', documentUrl, documentNom },
+                { notifier: false },
+              );
+            }
           } catch (errSupport) {
             console.error('Erreur lors de l\'envoi du message d\'admission dans le chat support:', errSupport);
           }
