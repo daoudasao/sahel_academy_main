@@ -6,7 +6,7 @@ class SupportMessage {
   final String id;
   final ExpediteurSupport expediteur;
   final String contenu;
-  final String type; // "texte" | "audio" | "document"
+  final String type; // "texte" | "audio" | "document" | "image" | "video" | "fichier"
   final String? audioUrl;
   final String? documentUrl;
   final String? documentNom;
@@ -31,17 +31,55 @@ class SupportMessage {
   bool get estDeMoi => expediteur == ExpediteurSupport.client;
 
   /// Vrai si c'est un message vocal.
+  /// Les pièces jointes (image, fichier, document) ne sont jamais des vocaux,
+  /// même si d'anciens messages de l'admin rangeaient leur lien dans audioUrl.
   bool get estAudio =>
       type == 'audio' ||
-      (audioUrl != null && audioUrl!.isNotEmpty) ||
+      (!_estPieceJointe && audioUrl != null && audioUrl!.isNotEmpty) ||
       contenu.startsWith('http') && (contenu.endsWith('.m4a') || contenu.endsWith('.mp3') || contenu.endsWith('.aac') || contenu.contains('/support/'));
+
+  bool get _estPieceJointe =>
+      type == 'image' ||
+      type == 'video' ||
+      type == 'fichier' ||
+      type == 'document';
+
+  /// Lien de la pièce jointe, quel que soit le champ qui le porte
+  /// (documentUrl, ou audioUrl pour d'anciens messages de l'admin).
+  String get urlPieceJointe {
+    if (documentUrl != null && documentUrl!.isNotEmpty) return documentUrl!;
+    if (_estPieceJointe && audioUrl != null && audioUrl!.isNotEmpty) {
+      return audioUrl!;
+    }
+    return contenu.startsWith('http') ? contenu : '';
+  }
+
+  String get _extension {
+    final chemin = Uri.tryParse(urlPieceJointe)?.path ?? urlPieceJointe;
+    final nom = (documentNom?.isNotEmpty ?? false) ? documentNom! : chemin;
+    final point = nom.lastIndexOf('.');
+    return point < 0 ? '' : nom.substring(point + 1).toLowerCase();
+  }
+
+  /// Vrai si la pièce jointe est une image (affichée dans la discussion).
+  bool get estImage =>
+      urlPieceJointe.isNotEmpty &&
+      (type == 'image' ||
+          const {'jpg', 'jpeg', 'png', 'webp', 'gif'}.contains(_extension));
+
+  /// Vrai si la pièce jointe est une vidéo.
+  bool get estVideo =>
+      urlPieceJointe.isNotEmpty &&
+      (type == 'video' ||
+          const {'mp4', 'mov', 'm4v'}.contains(_extension) ||
+          (_extension == 'webm' && type != 'audio'));
 
   /// Vrai si un document est joint.
   bool get aDocument => documentUrl != null && documentUrl!.isNotEmpty;
 
   /// Vrai si c'est un message de type document.
   bool get estDocument =>
-      type == 'document' ||
+      _estPieceJointe ||
       aDocument ||
       (contenu.startsWith('http') &&
           (contenu.endsWith('.pdf') ||
@@ -50,8 +88,7 @@ class SupportMessage {
               contenu.contains('/documents/')));
 
   /// URL du document joint.
-  String get urlDocument =>
-      documentUrl ?? (contenu.startsWith('http') ? contenu : '');
+  String get urlDocument => urlPieceJointe;
 
   /// Nom d'affichage du document joint.
   String get nomDocument {

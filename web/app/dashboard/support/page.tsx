@@ -42,13 +42,28 @@ export type SupportMessageDto = {
   userId: string;
   expediteur: ExpediteurSupport;
   contenu: string;
-  type: string; // "texte" | "audio" | "fichier"
+  type: string; // "texte" | "audio" | "fichier" | "image" | "document"
   audioUrl?: string | null;
+  documentUrl?: string | null;
+  documentNom?: string | null;
   dureeSeconds?: number | null;
   lu: boolean;
   createdAt: string;
   modifieLe?: string | null;
 };
+
+/** Lien de la pièce jointe : `documentUrl` (documents envoyés par le backend) ou `audioUrl` (fichiers envoyés depuis l'admin). */
+function urlPieceJointe(msg: SupportMessageDto): string {
+  return msg.documentUrl || msg.audioUrl || msg.contenu;
+}
+
+function estImage(msg: SupportMessageDto): boolean {
+  return msg.type === "image" || /\.(png|jpe?g|webp|gif)$/i.test(urlPieceJointe(msg));
+}
+
+function estVideo(msg: SupportMessageDto): boolean {
+  return msg.type === "video" || /\.(mp4|mov|m4v)$/i.test(urlPieceJointe(msg));
+}
 
 export type SupportConversationDto = {
   id: string; // userId
@@ -133,6 +148,7 @@ export default function SupportPage() {
   const [conversations, setConversations] = useState<SupportConversationDto[]>([]);
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<SupportMessageDto[]>([]);
+  const [imageAgrandie, setImageAgrandie] = useState<string | null>(null);
   
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -460,13 +476,21 @@ export default function SupportPage() {
       const res = await uploadApi(file, "support");
       const isAudio = file.type.startsWith("audio/") || file.name.endsWith(".mp3") || file.name.endsWith(".m4a");
       const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
 
-      const type = isAudio ? "audio" : isImage ? "image" : "fichier";
-      const created = await supportApi.sendMessage(activeUserId, {
-        contenu: file.name,
-        type: type,
-        audioUrl: res.url,
-      });
+      // Seuls les vocaux utilisent audioUrl : l'app classe tout message avec
+      // audioUrl comme vocal. Les autres fichiers passent par documentUrl.
+      const created = await supportApi.sendMessage(
+        activeUserId,
+        isAudio
+          ? { contenu: file.name, type: "audio", audioUrl: res.url }
+          : {
+              contenu: file.name,
+              type: isImage ? "image" : isVideo ? "video" : "document",
+              documentUrl: res.url,
+              documentNom: file.name,
+            },
+      );
 
       setMessages((prev) => (prev.some((m) => m.id === created.id) ? prev : [...prev, created]));
       setConversations((prev) =>
@@ -844,7 +868,11 @@ export default function SupportPage() {
                         {conv.lastMessage
                           ? conv.lastMessage.type === "audio"
                             ? "🎙️ Message vocal"
-                            : conv.lastMessage.type === "fichier"
+                            : conv.lastMessage.type === "image"
+                            ? "📷 Photo"
+                            : conv.lastMessage.type === "video"
+                            ? "🎬 Vidéo"
+                            : conv.lastMessage.type === "fichier" || conv.lastMessage.type === "document"
                             ? "📎 Pièce jointe"
                             : conv.lastMessage.contenu
                           : "Discussion ouverte"}
@@ -1008,7 +1036,7 @@ export default function SupportPage() {
                                 : `bg-white dark:bg-[#1b2936] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 shadow-xs ${isLastOfGroup ? "rounded-bl-xs" : ""}`
                             }`}
                           >
-                            {msg.type === "audio" || msg.audioUrl ? (
+                            {msg.type === "audio" || (msg.audioUrl && msg.type !== "fichier" && msg.type !== "image") ? (
                               <div className="flex flex-col gap-1.5 py-1 min-w-[200px] max-w-full">
                                 <div className="flex items-center justify-between text-xs font-semibold opacity-90">
                                   <span className="flex items-center gap-1.5">
@@ -1020,18 +1048,31 @@ export default function SupportPage() {
                                 </div>
                                 <audio controls src={msg.audioUrl || msg.contenu} className="w-full h-9 rounded-md mt-1" />
                               </div>
-                            ) : msg.type === "fichier" || msg.type === "image" ? (
-                              <div className="flex flex-col gap-1">
-                                {msg.type === "image" || (msg.audioUrl && (msg.audioUrl.endsWith(".png") || msg.audioUrl.endsWith(".jpg") || msg.audioUrl.endsWith(".jpeg") || msg.audioUrl.endsWith(".webp"))) ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
+                            ) : msg.type === "fichier" || msg.type === "image" || msg.type === "video" || msg.type === "document" || msg.documentUrl ? (
+                              estImage(msg) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setImageAgrandie(urlPieceJointe(msg))}
+                                  title="Agrandir"
+                                  className="block -mx-2 -my-1 cursor-zoom-in"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img
-                                    src={msg.audioUrl || msg.contenu}
-                                    alt="Pièce jointe"
-                                    className="max-h-60 rounded-lg object-cover mb-1 border border-black/10"
+                                    src={urlPieceJointe(msg)}
+                                    alt={msg.documentNom || "Image"}
+                                    className="max-h-72 max-w-full rounded-xl object-cover"
                                   />
-                                ) : null}
+                                </button>
+                              ) : estVideo(msg) ? (
+                                <video
+                                  controls
+                                  preload="metadata"
+                                  src={urlPieceJointe(msg)}
+                                  className="-mx-2 -my-1 max-h-72 max-w-full rounded-xl bg-black"
+                                />
+                              ) : (
                                 <a
-                                  href={msg.audioUrl || msg.contenu}
+                                  href={urlPieceJointe(msg)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className={`flex items-center gap-2 p-2 rounded-lg text-xs font-medium border ${
@@ -1041,10 +1082,10 @@ export default function SupportPage() {
                                   }`}
                                 >
                                   <FileText className="w-4 h-4 shrink-0" />
-                                  <span className="truncate flex-1">{msg.contenu}</span>
+                                  <span className="truncate flex-1">{msg.documentNom || msg.contenu || "Document"}</span>
                                   <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                                 </a>
-                              </div>
+                              )
                             ) : (
                               editingId === msg.id ? (
                                 <div className="flex flex-col gap-2 min-w-[200px] sm:min-w-[240px]">
@@ -1099,6 +1140,43 @@ export default function SupportPage() {
                 })
               )}
               <div ref={messagesEndRef} />
+              {imageAgrandie && (
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Image agrandie"
+                  onClick={() => setImageAgrandie(null)}
+                  onKeyDown={(e) => e.key === "Escape" && setImageAgrandie(null)}
+                  tabIndex={-1}
+                  ref={(el) => el?.focus()}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 cursor-zoom-out"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setImageAgrandie(null)}
+                    title="Fermer"
+                    className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <a
+                    href={imageAgrandie}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Ouvrir dans un nouvel onglet"
+                    className="absolute top-4 right-16 p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+                  >
+                    <ExternalLink className="w-5 h-5" />
+                  </a>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imageAgrandie}
+                    alt="Image agrandie"
+                    className="max-h-full max-w-full object-contain rounded-lg"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Zone de saisie */}
@@ -1108,7 +1186,7 @@ export default function SupportPage() {
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 className="hidden"
-                accept="image/*,audio/*,application/pdf,.doc,.docx,.zip"
+                accept="image/*,video/mp4,video/quicktime,video/webm,audio/*,application/pdf,.doc,.docx,.zip"
               />
 
               {isRecording ? (

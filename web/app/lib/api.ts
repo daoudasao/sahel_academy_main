@@ -172,7 +172,10 @@ export const notificationsApi = {
 export const supportApi = {
   getConversations: () => api.get<any[]>("/support/conversations"),
   getConversation: (userId: string) => api.get<any[]>(`/support/conversations/${userId}`),
-  sendMessage: (userId: string, data: { contenu: string; type?: string; audioUrl?: string; dureeSeconds?: number }) =>
+  sendMessage: (
+    userId: string,
+    data: { contenu: string; type?: string; audioUrl?: string; documentUrl?: string; documentNom?: string; dureeSeconds?: number },
+  ) =>
     api.post<any>(`/support/conversations/${userId}/messages`, data),
   markUnread: (userId: string) => api.patch<any>(`/support/conversations/${userId}/non-lu`, {}),
   updateMessage: (id: string, contenu: string) => api.patch<any>(`/support/messages/${id}`, { contenu }),

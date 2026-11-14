@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/document_downloader.dart';
@@ -678,7 +679,11 @@ class _Bulle extends StatelessWidget {
                         ],
                       ),
                     ),
-                  if (message.estAudio)
+                  if (message.estImage)
+                    _ImageBulle(message: message)
+                  else if (message.estVideo)
+                    _VideoBulle(message: message, estDeMoi: moi)
+                  else if (message.estAudio)
                     _LecteurAudioBulle(
                       url: message.audioUrl ?? message.contenu,
                       dureeSeconds: message.dureeSeconds,
@@ -940,6 +945,173 @@ class _LecteurAudioBulleState extends State<_LecteurAudioBulle> {
 }
 
 /// Bulle d'affichage d'un document joint dans le chat support.
+/// Image affichée directement dans la discussion ; un toucher l'ouvre en
+/// plein écran (zoom au pincement).
+class _ImageBulle extends StatelessWidget {
+  final SupportMessage message;
+
+  const _ImageBulle({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = message.urlPieceJointe;
+    final tag = 'support-image-${message.id}';
+    final scheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        PageRouteBuilder(
+          opaque: false,
+          barrierColor: Colors.black,
+          pageBuilder: (_, _, _) => _ImagePleinEcran(url: url, tag: tag),
+          transitionsBuilder: (_, animation, _, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      ),
+      child: Hero(
+        tag: tag,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 280, minWidth: 160),
+            child: Image.network(
+              url,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, progress) => progress == null
+                  ? child
+                  : Container(
+                      width: 220,
+                      height: 180,
+                      color: scheme.surfaceContainerHighest,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(strokeWidth: 2),
+                    ),
+              errorBuilder: (context, _, _) => Container(
+                width: 220,
+                height: 120,
+                color: scheme.surfaceContainerHighest,
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImagePleinEcran extends StatelessWidget {
+  final String url;
+  final String tag;
+
+  const _ImagePleinEcran({required this.url, required this.tag});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Center(
+          child: InteractiveViewer(
+            minScale: 1,
+            maxScale: 5,
+            child: Hero(tag: tag, child: Image.network(url)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Vidéo : une carte dans la discussion ; un toucher l'ouvre dans le lecteur
+/// du téléphone.
+class _VideoBulle extends StatelessWidget {
+  final SupportMessage message;
+  final bool estDeMoi;
+
+  const _VideoBulle({required this.message, required this.estDeMoi});
+
+  Future<void> _ouvrir(BuildContext context) async {
+    final uri = Uri.tryParse(message.urlPieceJointe);
+    final ok = uri != null &&
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Impossible d'ouvrir la vidéo.")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nom = (message.documentNom?.isNotEmpty ?? false)
+        ? message.documentNom!
+        : (message.contenu.isNotEmpty && !message.contenu.startsWith('http')
+            ? message.contenu
+            : 'Vidéo');
+
+    return InkWell(
+      onTap: () => _ouvrir(context),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 220,
+        height: 130,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  size: 36,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 10,
+              right: 10,
+              bottom: 8,
+              child: Row(
+                children: [
+                  const Icon(Icons.videocam_rounded, size: 14, color: Colors.white70),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      nom,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 11.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DocumentBulle extends StatelessWidget {
   final SupportMessage message;
   final bool estDeMoi;
