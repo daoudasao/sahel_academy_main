@@ -992,7 +992,7 @@ class _ImageBulle extends StatelessWidget {
                 color: scheme.surfaceContainerHighest,
                 alignment: Alignment.center,
                 child: Icon(
-                  Icons.broken_image_outlined,
+                  Icons.broken_image,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -1092,7 +1092,7 @@ class _VideoBulle extends StatelessWidget {
               bottom: 8,
               child: Row(
                 children: [
-                  const Icon(Icons.videocam_rounded, size: 14, color: Colors.white70),
+                  const Icon(Icons.play_circle_fill, size: 14, color: Colors.white70),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
