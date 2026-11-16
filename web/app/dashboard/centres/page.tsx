@@ -4,6 +4,7 @@ import { useState, useEffect, Fragment } from "react";
 import InfoBanner from "@/app/components/InfoBanner";
 import { formatCreneau } from "@/app/lib/mock-data";
 import { centresApi } from "@/app/lib/api";
+import SelecteurPosition from "./SelecteurPosition";
 import {
   MapPin,
   Phone,
@@ -510,7 +511,7 @@ export default function CentresPage() {
 
       {/* Modal Création / Modification Centre */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[560px] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#0a2d26] text-lg font-bold">
               <Building2 className="w-5 h-5 text-emerald-600" />
@@ -576,6 +577,23 @@ export default function CentresPage() {
 
             <div className="space-y-1 pt-2 border-t border-slate-100">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Position sur la carte
+              </label>
+              {modalOpen && (
+                <SelecteurPosition
+                  valeur={(() => {
+                    const gps = lireCoordonnees(form.coordonnees);
+                    return gps && gps !== "invalide" ? gps : null;
+                  })()}
+                  onChange={(p) =>
+                    setForm((f) => ({ ...f, coordonnees: `${p.latitude}, ${p.longitude}` }))
+                  }
+                />
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Coordonnées GPS (latitude, longitude)
               </label>
               <input
@@ -587,7 +605,7 @@ export default function CentresPage() {
                 onChange={(e) => setForm({ ...form, coordonnees: e.target.value })}
               />
               <p className="text-[11px] text-slate-500">
-                Dans Google Maps, faites un clic droit sur le centre puis cliquez sur les coordonnées pour les copier.
+                Remplies automatiquement par la carte. Vous pouvez aussi les coller depuis Google Maps.
                 Elles permettent à l&apos;application d&apos;ouvrir l&apos;itinéraire.
               </p>
             </div>
