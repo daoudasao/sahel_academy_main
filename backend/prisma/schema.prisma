@@ -90,6 +90,14 @@ enum MotifSignalement {
   autre
 }
 
+// Rendez-vous pris par un utilisateur dans un centre (écran « Prendre RDV »).
+enum StatutRendezVous {
+  en_attente
+  confirme
+  annule
+  honore
+}
+
 enum StatutSignalement {
   en_attente
   // Contenu retiré par la modération
@@ -134,6 +142,7 @@ model User {
   supportMessages      SupportMessage[]
   signalements         Signalement[]
   appInstalls          AppInstall[]
+  rendezVous           RendezVous[]
 
   @@map("users")
 }
@@ -215,10 +224,16 @@ model Centre {
   ville     String
   adresse   String?
   telephone String?
+  // Localisation précise (bouton « Itinéraire » de l'app) : coordonnées GPS
+  // et/ou lien Google Maps saisi depuis le dashboard.
+  latitude  Float?
+  longitude Float?
+  lienMaps  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  creneaux Creneau[]
+  creneaux   Creneau[]
+  rendezVous RendezVous[]
 
   // Corbeille : élément supprimé (restaurable) tant que deletedAt est renseigné.
   deletedAt    DateTime?
@@ -235,9 +250,54 @@ model Creneau {
   dateHeure DateTime
   createdAt DateTime @default(now())
 
-  centre Centre @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  centre     Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  rendezVous RendezVous[]
 
   @@map("creneaux")
+}
+
+// Rendez-vous pris depuis l'app sur un créneau d'un centre. La date/heure est
+// copiée du créneau : le rendez-vous reste lisible si le créneau est retiré.
+model RendezVous {
+  id           String           @id @default(cuid())
+  userId       String
+  centreId     String
+  creneauId    String?
+  dateHeure    DateTime
+  motif        String?          @db.Text
+  statut       StatutRendezVous @default(en_attente)
+  // Note interne de l'équipe (visible uniquement dans le dashboard).
+  noteAdmin    String?          @db.Text
+  traiteParNom String?
+  traiteLe     DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  centre  Centre   @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  creneau Creneau? @relation(fields: [creneauId], references: [id], onDelete: SetNull)
+
+  // Corbeille : élément supprimé (restaurable) tant que deletedAt est renseigné.
+  deletedAt    DateTime?
+  deletedById  String?
+  deletedByNom String?
+
+  @@index([deletedAt])
+  @@index([statut])
+  @@index([userId])
+  @@index([dateHeure])
+  @@map("rendez_vous")
+}
+
+// Paramètres globaux modifiables depuis le dashboard (numéro WhatsApp du
+// service client…). Clé/valeur : voir backend/src/parametres.
+model Parametre {
+  cle          String   @id
+  valeur       String   @db.Text
+  updatedAt    DateTime @updatedAt
+  updatedByNom String?
+
+  @@map("parametres")
 }
 
 // ─────────────────────────────────────────

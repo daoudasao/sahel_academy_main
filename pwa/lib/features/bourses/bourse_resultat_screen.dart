@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/format.dart';
 import '../../data/repositories/admission_repository.dart';
 import '../../data/repositories/bourse_repository.dart';
+import '../../data/repositories/parametres_repository.dart';
 import '../../models/admission.dart';
 import '../../models/bourse.dart';
 import '../../widgets/erreur_chargement.dart';
@@ -54,7 +55,9 @@ class _BourseResultatScreenState extends State<BourseResultatScreen> {
     final message = Uri.encodeComponent(
       'Bonjour Sahel Academy, je suis $nomCandidat. Je vous contacte suite à mon admission à la bourse $titreBourse.',
     );
-    final url = Uri.parse('https://wa.me/22371493177?text=$message');
+    // Numéro du service client modifiable depuis le dashboard (Paramètres).
+    final lien = await context.read<ParametresRepository>().lienWhatsapp();
+    final url = Uri.parse('$lien?text=$message');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {

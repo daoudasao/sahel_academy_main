@@ -15,6 +15,7 @@ export const TYPES_CORBEILLE = [
   'centre',
   'departement',
   'actualite',
+  'rendez_vous',
 ] as const;
 export type TypeCorbeille = (typeof TYPES_CORBEILLE)[number];
 
@@ -51,7 +52,7 @@ export class CorbeilleService {
   /** Tous les éléments supprimés, du plus récent au plus ancien. */
   async lister(): Promise<ElementCorbeille[]> {
     const ordre = { deletedAt: 'desc' } as const;
-    const [bourses, formations, centres, departements, posts] =
+    const [bourses, formations, centres, departements, posts, rendezVous] =
       await Promise.all([
         this.prisma.bourse.findMany({
           where: SUPPRIME,
@@ -84,6 +85,16 @@ export class CorbeilleService {
         this.prisma.post.findMany({
           where: SUPPRIME,
           select: { ...META, contenu: true, auteurNom: true },
+          orderBy: ordre,
+        }),
+        this.prisma.rendezVous.findMany({
+          where: SUPPRIME,
+          select: {
+            ...META,
+            dateHeure: true,
+            user: { select: { nom: true } },
+            centre: { select: { nom: true } },
+          },
           orderBy: ordre,
         }),
       ]);
@@ -132,6 +143,18 @@ export class CorbeilleService {
         deletedAt: p.deletedAt!,
         deletedByNom: p.deletedByNom,
       })),
+      ...rendezVous.map((r) => ({
+        type: 'rendez_vous' as const,
+        id: r.id,
+        titre: `Rendez-vous de ${r.user.nom}`,
+        detail: `${r.centre.nom} · ${r.dateHeure.toLocaleString('fr-FR', {
+          dateStyle: 'short',
+          timeStyle: 'short',
+          timeZone: 'Africa/Bamako',
+        })}`,
+        deletedAt: r.deletedAt!,
+        deletedByNom: r.deletedByNom,
+      })),
     ];
 
     return elements.sort(
@@ -154,6 +177,10 @@ export class CorbeilleService {
       case 'departement':
         return this.sortir(() =>
           this.prisma.departement.update({ where: ou, data: HORS_CORBEILLE }),
+        );
+      case 'rendez_vous':
+        return this.sortir(() =>
+          this.prisma.rendezVous.update({ where: ou, data: HORS_CORBEILLE }),
         );
       case 'formation': {
         const formation = await this.prisma.formation.findFirst({
@@ -212,6 +239,8 @@ export class CorbeilleService {
         return this.sortir(() => this.prisma.centre.delete({ where: ou }));
       case 'actualite':
         return this.sortir(() => this.prisma.post.delete({ where: ou }));
+      case 'rendez_vous':
+        return this.sortir(() => this.prisma.rendezVous.delete({ where: ou }));
       case 'departement': {
         const formations = await this.prisma.formation.count({
           where: { departementId: id },

@@ -168,6 +168,13 @@ class ProfilScreen extends StatelessWidget {
                 sousTitre: 'Documents reçus dans mes formations',
                 onTap: () => context.push('/documents'),
               ),
+              _tuile(
+                context,
+                icon: Icons.event_available_outlined,
+                titre: 'Rendez-vous & centres',
+                sousTitre: 'Mes rendez-vous, adresse et itinéraire des centres',
+                onTap: () => context.push('/rendez-vous'),
+              ),
             ],
             _tuile(
               context,

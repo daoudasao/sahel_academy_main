@@ -42,6 +42,47 @@ export interface CandidateUser {
   token?: string;
 }
 
+// ─── Coordonnées du service client (modifiables depuis le dashboard) ───
+
+export interface ContactSupport {
+  /** Numéro tel qu'affiché (« +223 71 49 31 77 »). */
+  affichage: string;
+  /** Lien wa.me correspondant. */
+  lien: string;
+  email: string;
+}
+
+/** Valeur de secours si l'API est injoignable (même défaut que le backend). */
+export const CONTACT_SUPPORT_DEFAUT: ContactSupport = {
+  affichage: "+223 71 49 31 77",
+  lien: "https://wa.me/22371493177",
+  email: "contact@sahelacademy.org",
+};
+
+/**
+ * Numéro WhatsApp / e-mail du service client, lus dans les paramètres
+ * globaux (GET /parametres, public). Relu au plus toutes les 5 minutes.
+ */
+export async function fetchContactSupport(): Promise<ContactSupport> {
+  try {
+    const res = await fetch(`${API_URL}/parametres`, { next: { revalidate: 300 } });
+    if (!res.ok) return CONTACT_SUPPORT_DEFAUT;
+    const p = (await res.json()) as {
+      whatsappSupport?: string;
+      whatsappLien?: string | null;
+      emailSupport?: string;
+    };
+    if (!p.whatsappSupport || !p.whatsappLien) return CONTACT_SUPPORT_DEFAUT;
+    return {
+      affichage: p.whatsappSupport,
+      lien: p.whatsappLien,
+      email: p.emailSupport || CONTACT_SUPPORT_DEFAUT.email,
+    };
+  } catch {
+    return CONTACT_SUPPORT_DEFAUT;
+  }
+}
+
 export async function fetchBourses(): Promise<Bourse[]> {
   try {
     const res = await fetch(`${API_URL}/bourses`, {

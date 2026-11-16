@@ -17,7 +17,7 @@ import {
   Calendar,
   X,
   Search,
-  CheckCircle2,
+  Navigation,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,7 +28,31 @@ import {
   DialogFooter,
 } from "@/app/components/ui/dialog";
 
-const formVide = { nom: "", ville: "", adresse: "", telephone: "" };
+const formVide = { nom: "", ville: "", adresse: "", telephone: "", coordonnees: "", lienMaps: "" };
+
+/**
+ * Lit « 12.6392, -8.0029 » (copié depuis Google Maps : clic droit sur le
+ * lieu → coordonnées). Renvoie null si le champ est vide, "invalide" sinon.
+ */
+function lireCoordonnees(texte: string): { latitude: number; longitude: number } | null | "invalide" {
+  const t = texte.trim();
+  if (!t) return null;
+  const m = t.match(/^(-?\d+(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d+(?:[.,]\d+)?)$/);
+  if (!m) return "invalide";
+  const latitude = parseFloat(m[1].replace(",", "."));
+  const longitude = parseFloat(m[2].replace(",", "."));
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return "invalide";
+  return { latitude, longitude };
+}
+
+/** Lien carte d'un centre : lien saisi, sinon coordonnées GPS. */
+function lienCarte(c: Centre): string | null {
+  if (c.lienMaps) return c.lienMaps;
+  if (c.latitude != null && c.longitude != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${c.latitude},${c.longitude}`;
+  }
+  return null;
+}
 
 interface Creneau {
   id: string;
@@ -41,6 +65,9 @@ interface Centre {
   ville: string;
   adresse?: string;
   telephone?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  lienMaps?: string | null;
   creneaux: Creneau[];
 }
 
@@ -55,6 +82,7 @@ export default function CentresPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(formVide);
   const [submitting, setSubmitting] = useState(false);
+  const [erreurForm, setErreurForm] = useState<string | null>(null);
 
   // Modal Suppression
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -78,6 +106,7 @@ export default function CentresPage() {
   const openNew = () => {
     setEditId(null);
     setForm(formVide);
+    setErreurForm(null);
     setModalOpen(true);
   };
 
@@ -88,19 +117,38 @@ export default function CentresPage() {
       ville: c.ville,
       adresse: c.adresse || "",
       telephone: c.telephone || "",
+      coordonnees:
+        c.latitude != null && c.longitude != null ? `${c.latitude}, ${c.longitude}` : "",
+      lienMaps: c.lienMaps || "",
     });
+    setErreurForm(null);
     setModalOpen(true);
   };
 
   const save = async () => {
     if (!form.nom.trim() || submitting) return;
+    const gps = lireCoordonnees(form.coordonnees);
+    if (gps === "invalide") {
+      setErreurForm("Coordonnées GPS invalides. Format attendu : 12.6392, -8.0029");
+      return;
+    }
+    const lienMaps = form.lienMaps.trim();
+    if (lienMaps && !/^https?:\/\//i.test(lienMaps)) {
+      setErreurForm("Le lien Google Maps doit commencer par https://");
+      return;
+    }
+    setErreurForm(null);
     setSubmitting(true);
     try {
+      // Champs de localisation vides : null pour effacer la valeur enregistrée.
       const payload = {
         nom: form.nom.trim(),
         ville: form.ville,
         adresse: form.adresse || undefined,
         telephone: form.telephone || undefined,
+        latitude: gps?.latitude ?? null,
+        longitude: gps?.longitude ?? null,
+        lienMaps: lienMaps || null,
       };
       if (editId) {
         const updated = await centresApi.update(editId, payload);
@@ -112,6 +160,7 @@ export default function CentresPage() {
       setModalOpen(false);
     } catch (err) {
       console.error("Erreur lors de la sauvegarde du centre:", err);
+      setErreurForm(err instanceof Error ? err.message : "Enregistrement impossible");
     } finally {
       setSubmitting(false);
     }
@@ -323,6 +372,22 @@ export default function CentresPage() {
                           <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{c.telephone || "Téléphone non renseigné"}</span>
                         </div>
+                        {lienCarte(c) ? (
+                          <a
+                            href={lienCarte(c)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 hover:underline"
+                          >
+                            <Navigation className="w-3.5 h-3.5 shrink-0" />
+                            <span>Voir sur la carte</span>
+                          </a>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-amber-600">
+                            <Navigation className="w-3.5 h-3.5 shrink-0" />
+                            <span>Localisation GPS non renseignée</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Créneaux */}
@@ -508,6 +573,43 @@ export default function CentresPage() {
                 onChange={(e) => setForm({ ...form, telephone: e.target.value })}
               />
             </div>
+
+            <div className="space-y-1 pt-2 border-t border-slate-100">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Coordonnées GPS (latitude, longitude)
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2d26]"
+                placeholder="Ex: 12.6392, -8.0029"
+                value={form.coordonnees}
+                onChange={(e) => setForm({ ...form, coordonnees: e.target.value })}
+              />
+              <p className="text-[11px] text-slate-500">
+                Dans Google Maps, faites un clic droit sur le centre puis cliquez sur les coordonnées pour les copier.
+                Elles permettent à l&apos;application d&apos;ouvrir l&apos;itinéraire.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Lien Google Maps (facultatif)
+              </label>
+              <input
+                type="url"
+                className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2d26]"
+                placeholder="Ex: https://maps.app.goo.gl/…"
+                value={form.lienMaps}
+                onChange={(e) => setForm({ ...form, lienMaps: e.target.value })}
+              />
+            </div>
+
+            {erreurForm && (
+              <div className="p-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                {erreurForm}
+              </div>
+            )}
           </div>
 
           <DialogFooter className="pt-4 flex flex-col-reverse sm:flex-row gap-2 border-t mt-3">

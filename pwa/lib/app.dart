@@ -10,6 +10,8 @@ import 'data/repositories/espace_formateur_repository.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/bourse_repository.dart';
 import 'data/repositories/centre_repository.dart';
+import 'data/repositories/parametres_repository.dart';
+import 'data/repositories/rendez_vous_repository.dart';
 import 'data/repositories/classe_repository.dart';
 import 'data/repositories/formation_repository.dart';
 import 'data/repositories/notification_repository.dart';
@@ -98,6 +100,8 @@ class _SahelAcademyAppState extends State<SahelAcademyApp> {
         Provider(create: (_) => PaiementRepository()),
         Provider(create: (_) => AdmissionRepository()),
         Provider(create: (_) => CentreRepository()),
+        Provider(create: (_) => RendezVousRepository()),
+        Provider(create: (_) => ParametresRepository()),
         Provider(
           create: (_) => BourseRepository()..charger().catchError((_) {}),
         ),

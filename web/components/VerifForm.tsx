@@ -102,10 +102,13 @@ export default function VerifForm({
   formation,
   titre,
   sousTitre,
+  whatsappLien,
 }: {
   formation: string;
   titre: string;
   sousTitre: string;
+  /** Lien wa.me du service client (paramètre modifiable dans le dashboard). */
+  whatsappLien: string;
 }) {
   const [telephone, setTelephone] = useState("");
   const [chargement, setChargement] = useState(false);
@@ -264,7 +267,7 @@ export default function VerifForm({
                 {resultat.ton === "success" && (
                   <div className="anim-ligne mt-5" style={{ animationDelay: "0.48s" }}>
                     <a
-                      href={`https://wa.me/22371493177?text=${encodeURIComponent(
+                      href={`${whatsappLien}?text=${encodeURIComponent(
                         `Bonjour Sahel Academy, je suis ${resultat.nom ?? ""}. Je vous contacte suite à mon admission à la formation en ${formation.toLowerCase()}.`
                       )}`}
                       target="_blank"

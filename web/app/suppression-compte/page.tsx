@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import PageLegale, { CONTACT_WHATSAPP } from "@/components/PageLegale";
+import PageLegale from "@/components/PageLegale";
+import { fetchContactSupport } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Supprimer mon compte",
@@ -9,7 +10,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/suppression-compte" },
 };
 
-export default function SuppressionComptePage() {
+// Numéro WhatsApp relu depuis l'API au plus toutes les 5 minutes.
+export const revalidate = 300;
+
+export default async function SuppressionComptePage() {
+  const contact = await fetchContactSupport();
   return (
     <PageLegale titre="Supprimer mon compte Sahel Academy" miseAJour="25 septembre 2026">
       <section>
@@ -28,7 +33,7 @@ export default function SuppressionComptePage() {
         <h2>Sans l&apos;application</h2>
         <p>
           Écrivez-nous sur WhatsApp au{" "}
-          <a href={CONTACT_WHATSAPP.lien}>{CONTACT_WHATSAPP.affichage}</a> en
+          <a href={contact.lien}>{contact.affichage}</a> en
           indiquant l&apos;adresse e-mail de votre compte. Nous supprimons le
           compte sous 30 jours après avoir vérifié qu&apos;il vous appartient.
         </p>

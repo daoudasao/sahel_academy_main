@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Bourse, Champ, postulerBourse } from "@/lib/api";
+import { Bourse, CandidatureItem, Champ, fetchMesCandidatures, postulerBourse } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { CandidateAuthPanel, CandidateBadge, ProfilCompletionCard } from "@/components/CandidateAuth";
 import AppDownloadModal from "@/components/AppDownloadModal";
@@ -11,6 +11,7 @@ import {
   GraduationCap,
   Calendar,
   Clock,
+  Download,
   ArrowLeft,
   Send,
   AlertCircle,
@@ -24,6 +25,73 @@ interface BourseDetailClientProps {
   bourse: Bourse;
 }
 
+function StatutCandidature({
+  candidature,
+  bourse,
+}: {
+  candidature: CandidatureItem;
+  bourse: Bourse;
+}) {
+  const admis = candidature.statut === "admis";
+  const refuse = candidature.statut === "refuse";
+  const doc = candidature.bourse ?? bourse;
+  const date = candidature.dateDepot ?? candidature.createdAt;
+  const dateTexte = date
+    ? new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+
+  const style = admis
+    ? { fond: "bg-emerald-50 border-emerald-200", titre: "text-emerald-900", texte: "text-emerald-800", icone: "text-emerald-600" }
+    : refuse
+    ? { fond: "bg-slate-50 border-slate-200", titre: "text-slate-900", texte: "text-slate-600", icone: "text-slate-500" }
+    : { fond: "bg-amber-50 border-amber-200", titre: "text-amber-950", texte: "text-amber-800", icone: "text-amber-600" };
+  const Icone = admis ? CheckCircle2 : refuse ? AlertCircle : Clock;
+
+  return (
+    <div className={`p-6 rounded-2xl border text-center space-y-3 ${style.fond}`}>
+      <Icone className={`w-12 h-12 mx-auto ${style.icone}`} />
+      <p className={`text-[11px] font-bold uppercase tracking-wide ${style.texte}`}>
+        Vous avez déjà postulé à cette bourse
+      </p>
+      <h3 className={`text-lg font-bold ${style.titre}`}>
+        {admis ? "Félicitations, vous êtes admis(e) !" : refuse ? "Candidature non retenue" : "Candidature en attente d'examen"}
+      </h3>
+      <p className={`text-xs max-w-md mx-auto leading-relaxed ${style.texte}`}>
+        {admis
+          ? "Votre candidature a été validée."
+          : refuse
+          ? "Votre dossier n'a pas été retenu pour cette bourse. De nouvelles bourses sont régulièrement publiées."
+          : "Votre dossier a bien été reçu et est examiné par notre commission. Vous serez notifié de la décision."}
+        {dateTexte ? ` Déposée le ${dateTexte}.` : ""}
+      </p>
+      {admis && doc.messageAdmission && (
+        <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed max-w-md mx-auto text-left pl-3 border-l-2 border-emerald-500/40">
+          {doc.messageAdmission}
+        </p>
+      )}
+      {admis && doc.documentAdmissionUrl && (
+        <a
+          href={doc.documentAdmissionUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition"
+        >
+          <Download className="w-4 h-4" />
+          <span>{doc.documentAdmissionNom || "Télécharger le document d'admission"}</span>
+        </a>
+      )}
+      <div>
+        <Link
+          href="/candidatures"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0a2d26] text-white font-bold text-xs hover:bg-[#0d3b32] transition"
+        >
+          <span>Voir mes candidatures</span>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function BourseDetailClient({ bourse }: BourseDetailClientProps) {
   const { user, loading: authLoading, saveUser, logout, besoinCompletion, completerProfil, authError } = useAuth();
 
@@ -33,6 +101,33 @@ export default function BourseDetailClient({ bourse }: BourseDetailClientProps) 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successSubmitted, setSuccessSubmitted] = useState(false);
+
+  // Candidature déjà déposée par cet utilisateur pour cette bourse (le cas échéant)
+  const [maCandidature, setMaCandidature] = useState<CandidatureItem | null>(null);
+  const [verifCandidature, setVerifCandidature] = useState(false);
+
+  const chargerMaCandidature = useCallback(async () => {
+    if (!user) return;
+    const liste = await fetchMesCandidatures(user);
+    setMaCandidature(liste.find((c) => c.bourseId === bourse.id) ?? null);
+  }, [user, bourse.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setMaCandidature(null);
+      setVerifCandidature(false);
+      return;
+    }
+    let annule = false;
+    setVerifCandidature(true);
+    chargerMaCandidature().finally(() => {
+      if (!annule) setVerifCandidature(false);
+    });
+    return () => {
+      annule = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, bourse.id]);
 
   const handleInputChange = (fieldKeyOrId: string, value: any) => {
     setReponses((prev) => ({
@@ -58,7 +153,13 @@ export default function BourseDetailClient({ bourse }: BourseDetailClientProps) 
       setSuccessSubmitted(true);
       setDownloadModalOpen(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de la soumission de la candidature.");
+      const message = err instanceof Error ? err.message : "";
+      if (/déjà/i.test(message)) {
+        // Candidature déjà enregistrée : on affiche son statut plutôt qu'une erreur.
+        await chargerMaCandidature();
+        return;
+      }
+      setError(message || "Erreur lors de la soumission de la candidature.");
     } finally {
       setSubmitting(false);
     }
@@ -148,7 +249,7 @@ export default function BourseDetailClient({ bourse }: BourseDetailClientProps) 
 
           {/* Section Body */}
           <div className="p-6 sm:p-8 space-y-6">
-            {bourse.statut === "fermee" ? (
+            {bourse.statut === "fermee" && !maCandidature && !(user && verifCandidature) ? (
               <div className="p-8 rounded-3xl bg-amber-50/80 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800/60 text-center space-y-4">
                 <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto shadow-inner">
                   <Clock className="w-7 h-7" />
@@ -170,7 +271,7 @@ export default function BourseDetailClient({ bourse }: BourseDetailClientProps) 
                   </Link>
                 </div>
               </div>
-            ) : authLoading ? (
+            ) : authLoading || (user && verifCandidature) ? (
               <div className="py-10 flex justify-center">
                 <div className="w-6 h-6 rounded-full border-2 border-emerald-700 border-t-transparent animate-spin" />
               </div>
@@ -196,7 +297,9 @@ export default function BourseDetailClient({ bourse }: BourseDetailClientProps) 
               <>
                 <CandidateBadge user={user} onLogout={logout} />
 
-                {successSubmitted ? (
+                {maCandidature && !successSubmitted ? (
+                  <StatutCandidature candidature={maCandidature} bourse={bourse} />
+                ) : successSubmitted ? (
                   <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-3">
                     <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
                     <h3 className="text-lg font-bold text-emerald-900">

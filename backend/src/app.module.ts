@@ -25,6 +25,8 @@ import { AuditModule } from './audit/audit.module';
 import { SignalementsModule } from './signalements/signalements.module';
 import { AppInstallsModule } from './app-installs/app-installs.module';
 import { CorbeilleModule } from './corbeille/corbeille.module';
+import { ParametresModule } from './parametres/parametres.module';
+import { RendezVousModule } from './rendez-vous/rendez-vous.module';
 
 @Module({
   imports: [
@@ -75,6 +77,8 @@ import { CorbeilleModule } from './corbeille/corbeille.module';
     SignalementsModule,
     AppInstallsModule,
     CorbeilleModule,
+    ParametresModule,
+    RendezVousModule,
   ],
   controllers: [AppController],
   providers: [

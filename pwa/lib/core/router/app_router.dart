@@ -12,6 +12,7 @@ import '../../features/bourses/bourse_resultat_screen.dart';
 import '../../features/bourses/bourses_screen.dart';
 import '../../features/candidature/candidature_screen.dart';
 import '../../features/centres/centres_screen.dart';
+import '../../features/centres/mes_rendez_vous_screen.dart';
 import '../../features/formations/formation_detail_screen.dart';
 import '../../features/formateur/accueil_formateur_screen.dart';
 import '../../features/formateur/apprenants_classe_screen.dart';
@@ -260,6 +261,10 @@ GoRouter createRouter(AuthRepository auth) {
       GoRoute(
         path: '/centres',
         builder: (context, state) => const CentresScreen(),
+      ),
+      GoRoute(
+        path: '/rendez-vous',
+        builder: (context, state) => const MesRendezVousScreen(),
       ),
 
       // ---- Classe (Google Classroom) d'une formation ----

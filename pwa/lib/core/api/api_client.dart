@@ -128,6 +128,8 @@ class ApiClient {
         path.startsWith('/actualites') ||
         path.startsWith('/bourses') ||
         path.startsWith('/centres') ||
+        path.startsWith('/parametres') ||
+        path.startsWith('/rendez-vous/mes') ||
         path.startsWith('/admissions/mes-candidatures')) {
       return true;
     }

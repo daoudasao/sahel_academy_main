@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import PageLegale, { CONTACT_WHATSAPP } from "@/components/PageLegale";
+import PageLegale from "@/components/PageLegale";
+import { fetchContactSupport } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
@@ -9,7 +10,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/confidentialite" },
 };
 
-export default function ConfidentialitePage() {
+// Numéro WhatsApp relu depuis l'API au plus toutes les 5 minutes.
+export const revalidate = 300;
+
+export default async function ConfidentialitePage() {
+  const contact = await fetchContactSupport();
   return (
     <PageLegale titre="Politique de confidentialité" miseAJour="25 septembre 2026">
       <p>
@@ -127,7 +132,7 @@ export default function ConfidentialitePage() {
         <h2>8. Contact</h2>
         <p>
           Pour toute question sur vos données : WhatsApp{" "}
-          <a href={CONTACT_WHATSAPP.lien}>{CONTACT_WHATSAPP.affichage}</a>, ou
+          <a href={contact.lien}>{contact.affichage}</a>, ou
           la rubrique Support de l&apos;application.
         </p>
       </section>

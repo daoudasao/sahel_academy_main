@@ -20,15 +20,17 @@ const LIBELLES_TYPE: Record<TypeCorbeille, string> = {
   centre: "Centre",
   departement: "Département",
   actualite: "Actualité",
+  rendez_vous: "Rendez-vous",
 };
 
 /** Ce que la suppression définitive emporte avec l'élément. */
 const PERTES_DEFINITIVES: Record<TypeCorbeille, string> = {
   bourse: "la bourse, son formulaire et toutes ses candidatures",
   formation: "la formation, ses inscriptions, échéances, paiements, messages et documents de classe",
-  centre: "le centre et ses créneaux",
+  centre: "le centre, ses créneaux et ses rendez-vous",
   departement: "le département",
   actualite: "la publication, ses médias et ses commentaires",
+  rendez_vous: "le rendez-vous",
 };
 
 type Filtre = TypeCorbeille | "tous";

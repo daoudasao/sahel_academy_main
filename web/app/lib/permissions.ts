@@ -39,6 +39,14 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
     "RESPONSABLE_PEDAGOGIQUE",
     "STAFF",
   ],
+  // Doit rester aligné sur ROLES_RENDEZ_VOUS (backend/src/rendez-vous)
+  "/dashboard/rendez-vous": [
+    "CHEF_CENTRE",
+    "SUPER_ADMIN",
+    "RESPONSABLE_PEDAGOGIQUE",
+    "SUPPORT",
+    "STAFF",
+  ],
   "/dashboard/departements": [
     "CHEF_CENTRE",
     "SUPER_ADMIN",

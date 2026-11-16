@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/format.dart';
 import '../../data/repositories/admission_repository.dart';
 import '../../data/repositories/bourse_repository.dart';
+import '../../models/admission.dart';
 import '../../models/bourse.dart';
 import '../../widgets/erreur_chargement.dart';
 import '../../widgets/photo_banniere.dart';
@@ -25,6 +26,8 @@ class BourseDetailScreen extends StatefulWidget {
 
 class _BourseDetailScreenState extends State<BourseDetailScreen> {
   late Future<Bourse> _bourse;
+  // Candidature déjà déposée par l'utilisateur (null s'il n'a pas postulé).
+  late Future<Admission?> _candidature;
 
   @override
   void initState() {
@@ -33,6 +36,9 @@ class _BourseDetailScreenState extends State<BourseDetailScreen> {
       widget.bourseId,
       forcer: true,
     );
+    _candidature = context.read<AdmissionRepository>().maCandidatureBourse(
+      widget.bourseId,
+    );
   }
 
   void _reessayer() {
@@ -40,6 +46,9 @@ class _BourseDetailScreenState extends State<BourseDetailScreen> {
       _bourse = context.read<BourseRepository>().detail(
         widget.bourseId,
         forcer: true,
+      );
+      _candidature = context.read<AdmissionRepository>().maCandidatureBourse(
+        widget.bourseId,
       );
     });
   }
@@ -211,6 +220,24 @@ class _BourseDetailScreenState extends State<BourseDetailScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(20),
                   children: [
+                    // Déjà postulé : le statut de la candidature passe en premier
+                    FutureBuilder<Admission?>(
+                      future: _candidature,
+                      builder: (context, snap) {
+                        final c = snap.data;
+                        if (c == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: _CarteStatutCandidature(
+                            candidature: c,
+                            onTap: () => context.push(
+                              '/bourse/${bourse.id}/resultat',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
                     // Bandeau statut
                     if (!bourse.estOuverte)
                       Container(
@@ -314,7 +341,11 @@ class _BourseDetailScreenState extends State<BourseDetailScreen> {
             ),
           ],
         ),
-        bottomNavigationBar: _BarreCandidature(bourse: bourse),
+        bottomNavigationBar: _BarreCandidature(
+          key: ObjectKey(_candidature),
+          bourse: bourse,
+          candidature: _candidature,
+        ),
       ),
     ),
   );
@@ -325,7 +356,12 @@ class _BourseDetailScreenState extends State<BourseDetailScreen> {
 /// Barre fixe en bas avec le bouton de candidature.
 class _BarreCandidature extends StatefulWidget {
   final Bourse bourse;
-  const _BarreCandidature({required this.bourse});
+  final Future<Admission?> candidature;
+  const _BarreCandidature({
+    super.key,
+    required this.bourse,
+    required this.candidature,
+  });
 
   @override
   State<_BarreCandidature> createState() => _BarreCandidatureState();
@@ -343,9 +379,7 @@ class _BarreCandidatureState extends State<_BarreCandidature> {
 
   Future<void> _verifier() async {
     try {
-      final candidature = await context
-          .read<AdmissionRepository>()
-          .maCandidatureBourse(widget.bourse.id);
+      final candidature = await widget.candidature;
       if (mounted) {
         setState(() {
           _dejaPostule = candidature != null;
@@ -429,6 +463,89 @@ class _BarreCandidatureState extends State<_BarreCandidature> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Carte affichée en haut du détail quand l'utilisateur a déjà postulé :
+/// montre directement le statut de sa candidature.
+class _CarteStatutCandidature extends StatelessWidget {
+  final Admission candidature;
+  final VoidCallback onTap;
+
+  const _CarteStatutCandidature({
+    required this.candidature,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (couleur, icone, titre, description) = switch (candidature.statut) {
+      StatutAdmission.admis => (
+        AppColors.emerald,
+        Icons.verified_rounded,
+        'Admis(e) 🎉',
+        'Félicitations ! Votre candidature a été retenue par la commission.',
+      ),
+      StatutAdmission.enAttente => (
+        const Color(0xFFD97706),
+        Icons.hourglass_top_rounded,
+        'Candidature en cours d\'examen',
+        'Vous avez déjà postulé à cette bourse. Votre dossier est en cours d\'évaluation.',
+      ),
+      StatutAdmission.refuse => (
+        const Color(0xFF64748B),
+        Icons.info_outline_rounded,
+        'Non retenu(e)',
+        'Votre dossier n\'a malheureusement pas été retenu pour cette session.',
+      ),
+    };
+
+    return Material(
+      color: couleur.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: couleur.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Icon(icone, color: couleur, size: 32),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titre,
+                      style: TextStyle(
+                        color: couleur,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12.5,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: couleur),
+            ],
+          ),
         ),
       ),
     );

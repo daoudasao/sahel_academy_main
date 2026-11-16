@@ -1,12 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-/** Contact affiché sur les pages légales (même numéro que le bouton WhatsApp du site). */
-export const CONTACT_WHATSAPP = {
-  affichage: "+223 71 49 31 77",
-  lien: "https://wa.me/22371493177",
-};
-
 /**
  * Mise en page commune des pages légales publiques (politique de
  * confidentialité, suppression de compte). Ces pages sont exigées par Google

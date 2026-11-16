@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import VerifForm from "@/components/VerifForm";
 import { FORMATIONS, estSlugValide } from "@/lib/formations";
 import { IMAGE_PARTAGE } from "@/lib/seo";
+import { fetchContactSupport } from "@/lib/api";
+
+// Numéro WhatsApp du service client relu au plus toutes les 5 minutes.
+export const revalidate = 300;
 
 export function generateStaticParams() {
   return Object.keys(FORMATIONS).map((bourse) => ({ bourse }));
@@ -38,7 +42,13 @@ export default async function Page({
   const { bourse } = await params;
   if (!estSlugValide(bourse)) notFound();
   const f = FORMATIONS[bourse];
+  const contact = await fetchContactSupport();
   return (
-    <VerifForm formation={f.formation} titre={f.titre} sousTitre={f.sousTitre} />
+    <VerifForm
+      formation={f.formation}
+      titre={f.titre}
+      sousTitre={f.sousTitre}
+      whatsappLien={contact.lien}
+    />
   );
 }

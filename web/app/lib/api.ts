@@ -78,6 +78,10 @@ export const usersApi = {
   removeInscription: (userId: string, formationId: string) =>
     api.del(`/users/${userId}/inscriptions/${formationId}`),
   candidatures: (id: string) => api.get<any[]>(`/users/${id}/candidatures`),
+  /** Profil du compte connecté. */
+  me: () => api.get<{ id: string; nom: string; email: string; telephone: string | null }>("/users/me"),
+  updateMe: (data: { nom?: string; telephone?: string }) =>
+    api.patch<{ id: string; nom: string; email: string; telephone: string | null }>("/users/me", data),
 };
 
 export const departementsApi = {
@@ -246,7 +250,13 @@ export const signalementsApi = {
 
 // ─── Corbeille (éléments supprimés, restaurables) ───
 
-export type TypeCorbeille = "bourse" | "formation" | "centre" | "departement" | "actualite";
+export type TypeCorbeille =
+  | "bourse"
+  | "formation"
+  | "centre"
+  | "departement"
+  | "actualite"
+  | "rendez_vous";
 
 export interface ElementCorbeille {
   type: TypeCorbeille;
@@ -264,6 +274,52 @@ export const corbeilleApi = {
   /** SUPER_ADMIN uniquement : efface pour de bon (avec les données liées). */
   supprimerDefinitivement: (type: TypeCorbeille, id: string) =>
     api.del<unknown>(`/corbeille/${type}/${encodeURIComponent(id)}`),
+};
+
+// ─── Paramètres globaux (numéro WhatsApp du service client…) ───
+
+export interface ParametresGlobaux {
+  whatsappSupport: string;
+  emailSupport: string;
+  /** Lien wa.me calculé par l'API à partir du numéro. */
+  whatsappLien: string | null;
+}
+
+export const parametresApi = {
+  /** Lecture publique. */
+  get: () => api.get<ParametresGlobaux>("/parametres"),
+  /** CHEF_CENTRE / SUPER_ADMIN uniquement. */
+  update: (data: Partial<Pick<ParametresGlobaux, "whatsappSupport" | "emailSupport">>) =>
+    api.patch<ParametresGlobaux>("/parametres", data),
+};
+
+// ─── Rendez-vous pris depuis l'app dans un centre ───
+
+export type StatutRendezVous = "en_attente" | "confirme" | "annule" | "honore";
+
+export interface RendezVous {
+  id: string;
+  userId: string;
+  centreId: string;
+  creneauId: string | null;
+  dateHeure: string;
+  motif: string | null;
+  statut: StatutRendezVous;
+  noteAdmin: string | null;
+  traiteParNom: string | null;
+  traiteLe: string | null;
+  createdAt: string;
+  user: { id: string; nom: string; email: string; telephone: string | null };
+  centre: { id: string; nom: string; ville: string };
+}
+
+export const rendezVousApi = {
+  list: (statut?: StatutRendezVous) =>
+    api.get<RendezVous[]>(`/rendez-vous${statut ? `?statut=${statut}` : ""}`),
+  update: (id: string, data: { statut?: StatutRendezVous; noteAdmin?: string }) =>
+    api.patch<RendezVous>(`/rendez-vous/${id}`, data),
+  /** Envoie à la corbeille (CHEF_CENTRE / SUPER_ADMIN). */
+  remove: (id: string) => api.del<unknown>(`/rendez-vous/${id}`),
 };
 
 export const rolesApi = {
