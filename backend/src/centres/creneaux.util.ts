@@ -58,7 +58,16 @@ export function deplierCreneaux(
       resultat.push({ id: cr.id, dateHeure: cr.dateHeure });
     }
   }
-  return resultat.sort((a, b) => a.dateHeure.getTime() - b.dateHeure.getTime());
+  // Un ponctuel et un hebdomadaire à la même heure : une seule proposition.
+  const vus = new Set<number>();
+  return resultat
+    .sort((a, b) => a.dateHeure.getTime() - b.dateHeure.getTime())
+    .filter((c) => {
+      const t = c.dateHeure.getTime();
+      if (vus.has(t)) return false;
+      vus.add(t);
+      return true;
+    });
 }
 
 /** Sépare un identifiant reçu de l'app en `{ id, jour }` (jour absent = ponctuel). */
