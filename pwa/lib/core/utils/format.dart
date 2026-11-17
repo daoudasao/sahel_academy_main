@@ -13,6 +13,15 @@ String formatCreneau(DateTime d) =>
     '${DateFormat('EEE d MMM', 'fr_FR').format(d)} · '
     '${DateFormat('HH:mm', 'fr_FR').format(d)}';
 
+/// Jour d'un groupe de créneaux. Ex : "Lundi 8 sept.".
+String formatJourCreneau(DateTime d) {
+  final s = DateFormat('EEEE d MMM', 'fr_FR').format(d);
+  return s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+}
+
+/// Heure seule d'un créneau. Ex : "09:00".
+String formatHeure(DateTime d) => DateFormat('HH:mm', 'fr_FR').format(d);
+
 /// Créneau complet. Ex : "lundi 8 septembre à 09h00".
 String formatCreneauLong(DateTime d) =>
     DateFormat("EEEE d MMMM 'à' HH'h'mm", 'fr_FR').format(d);

@@ -13,7 +13,8 @@ class Formation {
   final double prixInscription;
   final double prixMensualite;
   final int dureeMois;
-  final String niveau; // Débutant, Intermédiaire, Avancé
+  /// Un ou plusieurs niveaux séparés par des virgules (« Débutant, Intermédiaire »).
+  final String niveau;
   final bool estBourse;
   final DateTime? datePublication;
   final DateTime? dateLimite; // date limite pour postuler
@@ -39,6 +40,13 @@ class Formation {
     this.formateurUserId,
     this.estFormateur = false,
   });
+
+  /// Niveaux de la formation : ["Débutant", "Intermédiaire"].
+  List<String> get niveaux => niveau
+      .split(',')
+      .map((n) => n.trim())
+      .where((n) => n.isNotEmpty)
+      .toList();
 
   /// Construit une Formation depuis le JSON de l'API backend.
   factory Formation.fromJson(Map<String, dynamic> j) {

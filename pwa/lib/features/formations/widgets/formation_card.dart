@@ -104,7 +104,7 @@ class FormationCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          formation.niveau,
+                          formation.niveaux.join(' · '),
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: scheme.outline, fontSize: 13),
                         ),

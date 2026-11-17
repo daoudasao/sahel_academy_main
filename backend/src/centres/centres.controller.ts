@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { CentresService } from './centres.service';
 import { CreateCentreDto } from './dto/create-centre.dto';
@@ -33,14 +34,15 @@ export class CentresController {
     return this.centresService.create(createCentreDto);
   }
 
+  /** `?vue=gestion` (dashboard) : créneaux bruts, sans dépliage des hebdomadaires. */
   @Get()
-  findAll() {
-    return this.centresService.findAll();
+  findAll(@Query('vue') vue?: string) {
+    return this.centresService.findAll(vue === 'gestion');
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.centresService.findOne(id);
+  findOne(@Param('id') id: string, @Query('vue') vue?: string) {
+    return this.centresService.findOne(id, vue === 'gestion');
   }
 
   @Roles(Role.CHEF_CENTRE, Role.STAFF, Role.RESPONSABLE_PEDAGOGIQUE)

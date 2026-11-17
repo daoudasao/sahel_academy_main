@@ -26,6 +26,7 @@ import {
   X,
   Percent,
 } from "lucide-react";
+import { ChoixNiveaux } from "@/app/components/Niveaux";
 
 export default function NouvelleFormationPage() {
   const router = useRouter();
@@ -411,18 +412,10 @@ export default function NouvelleFormationPage() {
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-amber-600" />
-                Niveau <span className="text-red-500">*</span>
+                Niveaux <span className="text-red-500">*</span>
               </label>
-              <select
-                className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2d26] transition-all"
-                value={form.niveau}
-                onChange={(e) => handleChange("niveau", e.target.value)}
-                required
-              >
-                <option value="Débutant">Débutant</option>
-                <option value="Intermédiaire">Intermédiaire</option>
-                <option value="Avancé">Avancé</option>
-              </select>
+              <ChoixNiveaux valeur={form.niveau} onChange={(v) => handleChange("niveau", v)} />
+              <p className="text-[11px] text-slate-400">Plusieurs choix possibles.</p>
             </div>
           </div>
         </div>

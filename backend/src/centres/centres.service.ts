@@ -1,9 +1,35 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCentreDto } from './dto/create-centre.dto';
 import { UpdateCentreDto } from './dto/update-centre.dto';
 import { CreateCreneauDto } from './dto/create-creneau.dto';
 import { NON_SUPPRIME, versCorbeille } from '../corbeille/corbeille.util';
+import { deplierCreneaux } from './creneaux.util';
+import type { Centre, Creneau } from '@prisma/client';
+
+/** Ordre d'affichage dans le dashboard : hebdomadaires (lundi → dimanche) puis datés. */
+const ORDRE_CRENEAUX = [
+  { jourSemaine: { sort: 'asc', nulls: 'last' } },
+  { heure: 'asc' },
+  { dateHeure: 'asc' },
+] as const;
+
+/**
+ * `gestion` = créneaux tels qu'enregistrés (dashboard) ;
+ * sinon créneaux hebdomadaires dépliés en dates (app).
+ */
+function pourAffichage<T extends Centre & { creneaux: Creneau[] }>(
+  centre: T,
+  gestion: boolean,
+) {
+  return gestion
+    ? centre
+    : { ...centre, creneaux: deplierCreneaux(centre.creneaux) };
+}
 
 @Injectable()
 export class CentresService {
@@ -16,22 +42,21 @@ export class CentresService {
     });
   }
 
-  async findAll() {
-    return this.prisma.centre.findMany({
+  async findAll(gestion = false) {
+    const centres = await this.prisma.centre.findMany({
       where: NON_SUPPRIME,
-      include: {
-        creneaux: { orderBy: { dateHeure: 'asc' } },
-      },
+      include: { creneaux: { orderBy: [...ORDRE_CRENEAUX] } },
     });
+    return centres.map((c) => pourAffichage(c, gestion));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, gestion = false) {
     const centre = await this.prisma.centre.findFirst({
       where: { id, ...NON_SUPPRIME },
-      include: { creneaux: { orderBy: { dateHeure: 'asc' } } },
+      include: { creneaux: { orderBy: [...ORDRE_CRENEAUX] } },
     });
     if (!centre) throw new NotFoundException('Centre non trouvé');
-    return centre;
+    return pourAffichage(centre, gestion);
   }
 
   async update(id: string, updateCentreDto: UpdateCentreDto) {
@@ -61,10 +86,24 @@ export class CentresService {
   // ─── Créneaux ───
 
   async addCreneau(centreId: string, dto: CreateCreneauDto) {
-    await this.findOne(centreId);
-    return this.prisma.creneau.create({
-      data: { centreId, dateHeure: new Date(dto.dateHeure) },
-    });
+    await this.findOne(centreId, true);
+    if (dto.jourSemaine && dto.heure) {
+      const existant = await this.prisma.creneau.findFirst({
+        where: { centreId, jourSemaine: dto.jourSemaine, heure: dto.heure },
+      });
+      if (existant) return existant;
+      return this.prisma.creneau.create({
+        data: { centreId, jourSemaine: dto.jourSemaine, heure: dto.heure },
+      });
+    }
+    if (dto.dateHeure) {
+      return this.prisma.creneau.create({
+        data: { centreId, dateHeure: new Date(dto.dateHeure) },
+      });
+    }
+    throw new BadRequestException(
+      'Indiquez un jour de la semaine et une heure, ou une date précise.',
+    );
   }
 
   async removeCreneau(creneauId: string) {

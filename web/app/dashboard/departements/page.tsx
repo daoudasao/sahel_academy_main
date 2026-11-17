@@ -27,6 +27,7 @@ import {
   LayoutGrid,
   Users,
 } from "lucide-react";
+import { BadgesNiveau } from "@/app/components/Niveaux";
 
 export default function DepartementsPage() {
   const [departementsList, setDepartementsList] = useState<any[]>([]);
@@ -458,17 +459,7 @@ export default function DepartementsPage() {
                                         Formateur : <strong className="text-slate-700">{f.formateur?.nom ?? "Non assigné"}</strong>
                                       </div>
                                     </div>
-                                    <span
-                                      className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 ${
-                                        f.niveau === "Débutant"
-                                          ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                                          : f.niveau === "Intermédiaire"
-                                          ? "bg-amber-100 text-amber-700 border border-amber-200"
-                                          : "bg-rose-100 text-rose-700 border border-rose-200"
-                                      }`}
-                                    >
-                                      {f.niveau || "Standard"}
-                                    </span>
+                                    <BadgesNiveau valeur={f.niveau} className="shrink-0 justify-end" />
                                   </div>
                                 ))}
                               </div>

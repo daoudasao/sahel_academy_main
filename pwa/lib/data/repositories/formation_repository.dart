@@ -136,7 +136,7 @@ class FormationRepository {
       if (departementId != null && f.departementId != departementId) {
         return false;
       }
-      if (niveau != 'Tous' && f.niveau != niveau) return false;
+      if (niveau != 'Tous' && !f.niveaux.contains(niveau)) return false;
       if (type == 'Payantes' && f.estBourse) return false;
       if (type == 'Bourses' && !f.estBourse) return false;
       if (q.isNotEmpty) {

@@ -17,32 +17,6 @@ import '../../data/repositories/support_repository.dart';
 import '../../models/support_message.dart';
 import '../../widgets/erreur_chargement.dart';
 
-class SuggestionRapide {
-  final String label;
-  final String message;
-  const SuggestionRapide({required this.label, required this.message});
-}
-
-/// Suggestions rapides proposées à l'élève.
-const List<SuggestionRapide> _suggestionsRapides = [
-  SuggestionRapide(
-    label: '🎓 Inscription aux cours',
-    message: "Bonjour Sahel Academy, j'aimerais m'inscrire à une de vos formations/cours. Pouvez-vous m'indiquer la démarche à suivre ?",
-  ),
-  SuggestionRapide(
-    label: '💳 Problème de paiement',
-    message: "Bonjour, j'ai une question ou une difficulté concernant le paiement de mes frais de formation. Merci de m me guider.",
-  ),
-  SuggestionRapide(
-    label: '🎁 Demande de bourse',
-    message: "Bonjour Sahel Academy, je souhaite obtenir des informations sur les modalités de candidature aux bourses d'études disponibles.",
-  ),
-  SuggestionRapide(
-    label: '📍 Rendez-vous en centre',
-    message: "Bonjour, j'aimerais prendre un rendez-vous dans vos locaux pour échanger de vive voix avec un conseiller.",
-  ),
-];
-
 /// Chat entre le client et le support Sahel Academy avec header enrichi, statut en ligne et vocal.
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
@@ -342,43 +316,9 @@ class _SupportScreenState extends State<SupportScreen> {
               },
             ),
           ),
-          // Barre de suggestions rapides
-          _barreSuggestions(context),
           // Zone de composition du message
           _composer(context),
         ],
-      ),
-    );
-  }
-
-  /// Barre de puces pour poser une question en 1 clic.
-  Widget _barreSuggestions(BuildContext context) {
-    return Container(
-      height: 44,
-      color: Theme.of(context).colorScheme.surface,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        itemCount: _suggestionsRapides.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final s = _suggestionsRapides[index];
-          return ActionChip(
-            label: Text(
-              s.label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.emeraldDark,
-              ),
-            ),
-            backgroundColor: AppColors.emeraldContainer,
-            side: BorderSide(
-              color: AppColors.emerald.withValues(alpha: 0.3),
-            ),
-            onPressed: () => _envoyer(s.message),
-          );
-        },
       ),
     );
   }
@@ -429,38 +369,6 @@ class _SupportScreenState extends State<SupportScreen> {
             height: 1.45,
             fontSize: 14,
           ),
-        ),
-        const SizedBox(height: 28),
-        const Text(
-          'Suggestions de sujets populaires :',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppColors.emeraldDark,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _suggestionsRapides.map((s) {
-            return ActionChip(
-              avatar: const Icon(Icons.flash_on_rounded, size: 16, color: AppColors.emerald),
-              label: Text(
-                s.label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.emeraldDark,
-                ),
-              ),
-              backgroundColor: AppColors.emeraldContainer,
-              side: BorderSide(
-                color: AppColors.emerald.withValues(alpha: 0.3),
-              ),
-              onPressed: () => _envoyer(s.message),
-            );
-          }).toList(),
         ),
       ],
     );

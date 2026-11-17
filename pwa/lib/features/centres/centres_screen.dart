@@ -203,26 +203,60 @@ class _CarteCentre extends StatelessWidget {
                 style: TextStyle(color: scheme.outline),
               )
             else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final creneau in centre.creneauxAVenir)
-                    ActionChip(
-                      avatar: Icon(
-                        Icons.schedule,
-                        size: 16,
-                        color: scheme.primary,
-                      ),
-                      label: Text(formatCreneau(creneau.dateHeure)),
-                      onPressed: () => _confirmer(context, creneau),
+              // Regroupés par jour : avec les créneaux hebdomadaires, la liste
+              // couvre plusieurs semaines.
+              for (final jour in _parJour(centre.creneauxAVenir)) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 6),
+                  child: Text(
+                    formatJourCreneau(jour.first.dateHeure),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
                     ),
-                ],
-              ),
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final creneau in jour)
+                      ActionChip(
+                        avatar: Icon(
+                          Icons.schedule,
+                          size: 16,
+                          color: scheme.primary,
+                        ),
+                        label: Text(formatHeure(creneau.dateHeure)),
+                        onPressed: () => _confirmer(context, creneau),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
           ],
         ),
       ),
     );
+  }
+
+  /// Créneaux (déjà triés) regroupés par jour calendaire.
+  static List<List<CreneauCentre>> _parJour(List<CreneauCentre> creneaux) {
+    final groupes = <List<CreneauCentre>>[];
+    for (final c in creneaux) {
+      final d = c.dateHeure;
+      final dernier = groupes.isEmpty ? null : groupes.last.first.dateHeure;
+      if (dernier != null &&
+          dernier.year == d.year &&
+          dernier.month == d.month &&
+          dernier.day == d.day) {
+        groupes.last.add(c);
+      } else {
+        groupes.add([c]);
+      }
+    }
+    return groupes;
   }
 
   Widget _infoLigne(BuildContext context, IconData icon, String texte) {

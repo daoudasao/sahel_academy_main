@@ -55,10 +55,29 @@ function lienCarte(c: Centre): string | null {
   return null;
 }
 
+// Ponctuel (dateHeure) ou hebdomadaire (jourSemaine 1 = lundi … 7 = dimanche + heure "HH:mm")
 interface Creneau {
   id: string;
-  dateHeure: string;
+  dateHeure?: string | null;
+  jourSemaine?: number | null;
+  heure?: string | null;
 }
+
+const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+
+function libelleCreneau(cr: Creneau): string {
+  if (cr.jourSemaine && cr.heure) return `Chaque ${JOURS[cr.jourSemaine - 1].toLowerCase()} · ${cr.heure.replace(":", "h")}`;
+  return cr.dateHeure ? formatCreneau(cr.dateHeure) : "—";
+}
+
+/** Clé de tri : hebdomadaires (lundi → dimanche, par heure), puis datés. */
+function cleCreneau(cr: Creneau): string {
+  if (cr.jourSemaine && cr.heure) return `0-${cr.jourSemaine}-${cr.heure}`;
+  return `1-${cr.dateHeure ?? ""}`;
+}
+
+type SaisieCreneau = { mode: "hebdo" | "date"; jours: number[]; heure: string; date: string };
+const SAISIE_VIDE: SaisieCreneau = { mode: "hebdo", jours: [], heure: "", date: "" };
 
 interface Centre {
   id: string;
@@ -90,12 +109,18 @@ export default function CentresPage() {
   const [deletingName, setDeletingName] = useState("");
 
   // Input créneau par centre
-  const [newSlotMap, setNewSlotMap] = useState<Record<string, string>>({});
+  const [newSlotMap, setNewSlotMap] = useState<Record<string, SaisieCreneau>>({});
+  const [ajoutEnCours, setAjoutEnCours] = useState(false);
+  const saisieDe = (id: string) => newSlotMap[id] ?? SAISIE_VIDE;
+  const majSaisie = (id: string, maj: Partial<SaisieCreneau>) =>
+    setNewSlotMap((prev) => ({ ...prev, [id]: { ...(prev[id] ?? SAISIE_VIDE), ...maj } }));
+  const saisieValide = (x: SaisieCreneau) =>
+    x.mode === "hebdo" ? x.jours.length > 0 && !!x.heure : !!x.date;
 
   useEffect(() => {
     (async () => {
       try {
-        setCentres(await centresApi.list());
+        setCentres(await centresApi.list({ gestion: true }));
       } catch (err) {
         console.error("Erreur lors du chargement des centres:", err);
       } finally {
@@ -182,18 +207,31 @@ export default function CentresPage() {
   };
 
   const addSlot = async (centreId: string) => {
-    const iso = newSlotMap[centreId];
-    if (!iso) return;
+    const saisie = saisieDe(centreId);
+    if (!saisieValide(saisie) || ajoutEnCours) return;
+    setAjoutEnCours(true);
     try {
-      const created = await centresApi.addCreneau(centreId, {
-        dateHeure: new Date(iso).toISOString(),
-      });
+      // Un créneau par jour coché (le serveur ignore les doublons).
+      const crees: Creneau[] =
+        saisie.mode === "hebdo"
+          ? await Promise.all(
+              saisie.jours.map((jourSemaine) =>
+                centresApi.addCreneau(centreId, { jourSemaine, heure: saisie.heure })
+              )
+            )
+          : [await centresApi.addCreneau(centreId, { dateHeure: new Date(saisie.date).toISOString() })];
       setCentres((cs) =>
-        cs.map((c) => (c.id !== centreId ? c : { ...c, creneaux: [...c.creneaux, created] }))
+        cs.map((c) => {
+          if (c.id !== centreId) return c;
+          const nouveaux = crees.filter((n) => !c.creneaux.some((x) => x.id === n.id));
+          return { ...c, creneaux: [...c.creneaux, ...nouveaux] };
+        })
       );
-      setNewSlotMap((prev) => ({ ...prev, [centreId]: "" }));
+      setNewSlotMap((prev) => ({ ...prev, [centreId]: { ...SAISIE_VIDE, mode: saisie.mode } }));
     } catch (err) {
       console.error("Erreur lors de l'ajout du créneau:", err);
+    } finally {
+      setAjoutEnCours(false);
     }
   };
 
@@ -341,7 +379,7 @@ export default function CentresPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {filtered.map((c) => {
-                const creneaux = [...c.creneaux].sort((a, b) => (a.dateHeure < b.dateHeure ? -1 : 1));
+                const creneaux = [...c.creneaux].sort((a, b) => (cleCreneau(a) < cleCreneau(b) ? -1 : 1));
                 const isExpanded = expandedId === c.id;
 
                 return (
@@ -465,7 +503,7 @@ export default function CentresPage() {
                                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200/80 text-xs font-medium"
                                   >
                                     <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                    <span>{formatCreneau(cr.dateHeure)}</span>
+                                    <span>{libelleCreneau(cr)}</span>
                                     <button
                                       onClick={() => removeSlot(c.id, cr.id)}
                                       className="text-indigo-400 hover:text-red-600 p-0.5 rounded-md hover:bg-indigo-100/80 transition"
@@ -478,25 +516,100 @@ export default function CentresPage() {
                               )}
                             </div>
 
-                            {/* Formulaire d'ajout rapide de créneau */}
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-3 border-t border-slate-100">
-                              <input
-                                type="datetime-local"
-                                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2d26]"
-                                value={newSlotMap[c.id] || ""}
-                                onChange={(e) =>
-                                  setNewSlotMap({ ...newSlotMap, [c.id]: e.target.value })
-                                }
-                              />
-                              <button
-                                onClick={() => addSlot(c.id)}
-                                disabled={!newSlotMap[c.id]}
-                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#0a2d26] hover:bg-[#0d3b32] text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>Ajouter ce créneau</span>
-                              </button>
-                            </div>
+                            {/* Formulaire d'ajout de créneau : chaque semaine (jours + heure) ou date précise */}
+                            {(() => {
+                              const saisie = saisieDe(c.id);
+                              return (
+                                <div className="space-y-3 pt-3 border-t border-slate-100">
+                                  <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold">
+                                    {(
+                                      [
+                                        ["hebdo", "Chaque semaine"],
+                                        ["date", "Date précise"],
+                                      ] as const
+                                    ).map(([mode, label]) => (
+                                      <button
+                                        key={mode}
+                                        type="button"
+                                        onClick={() => majSaisie(c.id, { mode })}
+                                        className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                                          saisie.mode === mode ? "bg-white text-[#0a2d26] shadow-2xs" : "text-slate-500 hover:text-slate-700"
+                                        }`}
+                                      >
+                                        {label}
+                                      </button>
+                                    ))}
+                                  </div>
+
+                                  {saisie.mode === "hebdo" ? (
+                                    <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {JOURS.map((nom, i) => {
+                                          const jour = i + 1;
+                                          const actif = saisie.jours.includes(jour);
+                                          return (
+                                            <button
+                                              key={jour}
+                                              type="button"
+                                              aria-pressed={actif}
+                                              onClick={() =>
+                                                majSaisie(c.id, {
+                                                  jours: actif
+                                                    ? saisie.jours.filter((x) => x !== jour)
+                                                    : [...saisie.jours, jour].sort(),
+                                                })
+                                              }
+                                              className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                                                actif
+                                                  ? "bg-[#0a2d26] border-[#0a2d26] text-white"
+                                                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                                              }`}
+                                            >
+                                              {nom.slice(0, 3)}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                      <input
+                                        type="time"
+                                        aria-label="Heure du créneau"
+                                        className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2d26]"
+                                        value={saisie.heure}
+                                        onChange={(e) => majSaisie(c.id, { heure: e.target.value })}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <input
+                                      type="datetime-local"
+                                      aria-label="Date et heure du créneau"
+                                      className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2d26]"
+                                      value={saisie.date}
+                                      onChange={(e) => majSaisie(c.id, { date: e.target.value })}
+                                    />
+                                  )}
+
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                                    <button
+                                      onClick={() => addSlot(c.id)}
+                                      disabled={!saisieValide(saisie) || ajoutEnCours}
+                                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#0a2d26] hover:bg-[#0d3b32] text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      <span>
+                                        {saisie.mode === "hebdo" && saisie.jours.length > 1
+                                          ? `Ajouter ces ${saisie.jours.length} créneaux`
+                                          : "Ajouter ce créneau"}
+                                      </span>
+                                    </button>
+                                    {saisie.mode === "hebdo" && (
+                                      <span className="text-[11px] text-slate-400">
+                                        Répété chaque semaine ; l&apos;app propose les dates des 2 prochaines semaines.
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </td>
                       </tr>

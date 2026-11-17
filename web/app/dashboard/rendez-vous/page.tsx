@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   rendezVousApi,
+  supportApi,
   type RendezVous,
   type StatutRendezVous,
 } from "@/app/lib/api";
 import { useSession } from "@/app/lib/auth-client";
 import InfoBanner from "@/app/components/InfoBanner";
+import { canAccessRoute } from "@/app/lib/permissions";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,9 @@ import {
   Phone,
   Mail,
   MessageSquare,
+  MessageCircle,
+  BellRing,
+  Send,
   Loader2,
 } from "lucide-react";
 
@@ -55,7 +60,7 @@ const STATUTS: Record<
   },
 };
 
-type Filtre = "a_venir" | StatutRendezVous | "tous";
+type Filtre = "a_venir" | "manque" | StatutRendezVous | "tous";
 
 const formaterDate = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", {
@@ -67,6 +72,32 @@ const formaterDate = (iso: string) =>
     minute: "2-digit",
   });
 
+/** Rendez-vous manqué : l'heure est passée (marge 1 h) et il n'a été ni honoré ni annulé. */
+const estManque = (r: RendezVous) =>
+  new Date(r.dateHeure).getTime() < Date.now() - 3600_000 &&
+  (r.statut === "en_attente" || r.statut === "confirme");
+
+const premierPrenom = (nom: string) => nom.trim().split(/\s+/)[0] || "";
+
+/** Message de relance pré-rempli, envoyé dans le Chat Support. */
+const messageRelance = (r: RendezVous) => {
+  const quand = new Date(r.dateHeure).toLocaleString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const prenom = premierPrenom(r.user.nom);
+  return (
+    `Bonjour${prenom ? ` ${prenom}` : ""} 👋\n\n` +
+    `Tu avais rendez-vous le ${quand} au centre ${r.centre.nom} (${r.centre.ville}), ` +
+    `mais nous ne t'avons pas vu. Tout va bien ?\n\n` +
+    `Tu peux reprendre un nouveau créneau depuis l'app (Profil → Rendez-vous & centres), ` +
+    `ou nous répondre ici si tu as une question.\n\nL'équipe Sahel Academy`
+  );
+};
+
 const estAVenir = (r: RendezVous) =>
   new Date(r.dateHeure).getTime() >= Date.now() - 2 * 3600_000 &&
   (r.statut === "en_attente" || r.statut === "confirme");
@@ -76,6 +107,8 @@ export default function RendezVousPage() {
   const role = (session?.user as { role?: string } | undefined)?.role?.toUpperCase();
   // Doit rester aligné sur RendezVousController.remove (backend)
   const peutSupprimer = role === "CHEF_CENTRE" || role === "SUPER_ADMIN";
+  // Le Chat Support n'est pas ouvert à tous les rôles qui voient les rendez-vous
+  const peutContacter = canAccessRoute(role, "/dashboard/support");
 
   const [rdvs, setRdvs] = useState<RendezVous[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +122,45 @@ export default function RendezVousPage() {
   const [note, setNote] = useState("");
   // Suppression (corbeille)
   const [aSupprimer, setASupprimer] = useState<RendezVous | null>(null);
+
+  // Relance d'un rendez-vous manqué (message dans le Chat Support)
+  const [aRelancer, setARelancer] = useState<RendezVous | null>(null);
+  const [texteRelance, setTexteRelance] = useState("");
+  const [relanceErreur, setRelanceErreur] = useState<string | null>(null);
+  const [relanceOk, setRelanceOk] = useState<string | null>(null);
+
+  const ouvrirRelance = (r: RendezVous) => {
+    setTexteRelance(messageRelance(r));
+    setRelanceErreur(null);
+    setARelancer(r);
+  };
+
+  const envoyerRelance = async () => {
+    const r = aRelancer;
+    if (!r || !texteRelance.trim()) return;
+    setEnCours(r.id);
+    setRelanceErreur(null);
+    try {
+      await supportApi.sendMessage(r.user.id, { contenu: texteRelance.trim(), type: "texte" });
+      // Trace dans la note interne : l'équipe voit que la personne a déjà été relancée.
+      const quand = new Date().toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      const auteur = session?.user?.name ? ` par ${session.user.name}` : "";
+      const trace = `Relance envoyée le ${quand}${auteur}.`;
+      const noteAdmin = [r.noteAdmin?.trim(), trace].filter(Boolean).join("\n").slice(-1000);
+      try {
+        remplacer(await rendezVousApi.update(r.id, { noteAdmin }));
+      } catch (err) {
+        console.error("Relance envoyée, mais note interne non mise à jour :", err);
+      }
+      setARelancer(null);
+      setRelanceOk(`Relance envoyée à ${r.user.nom} dans le Chat Support.`);
+      setTimeout(() => setRelanceOk(null), 4000);
+    } catch (err) {
+      setRelanceErreur(err instanceof Error ? err.message : "Envoi impossible");
+    } finally {
+      setEnCours(null);
+    }
+  };
 
   const charger = async () => {
     setLoading(true);
@@ -157,11 +229,19 @@ export default function RendezVousPage() {
       ? rdvs.length
       : f === "a_venir"
       ? rdvs.filter(estAVenir).length
+      : f === "manque"
+      ? rdvs.filter(estManque).length
       : rdvs.filter((r) => r.statut === f).length;
 
   const affiches = rdvs
     .filter((r) => {
-      if (filtre === "a_venir" ? !estAVenir(r) : filtre !== "tous" && r.statut !== filtre) {
+      const garde =
+        filtre === "a_venir"
+          ? estAVenir(r)
+          : filtre === "manque"
+          ? estManque(r)
+          : filtre === "tous" || r.statut === filtre;
+      if (!garde) {
         return false;
       }
       if (!search.trim()) return true;
@@ -238,6 +318,7 @@ export default function RendezVousPage() {
           {(
             [
               { id: "a_venir", label: "À venir" },
+              { id: "manque", label: "Manqués" },
               { id: "en_attente", label: "En attente" },
               { id: "confirme", label: "Confirmés" },
               { id: "honore", label: "Honorés" },
@@ -353,6 +434,26 @@ export default function RendezVousPage() {
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <div className="inline-flex items-center justify-end gap-1.5">
+                      {peutContacter && estManque(r) && (
+                        <button
+                          onClick={() => ouvrirRelance(r)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-semibold text-xs transition cursor-pointer"
+                          title="Rendez-vous manqué : envoyer une relance dans le Chat Support"
+                        >
+                          <BellRing className="w-3.5 h-3.5" />
+                          Relancer
+                        </button>
+                      )}
+                      {peutContacter && (
+                        <Link
+                          href={`/dashboard/support?user=${r.user.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-semibold text-xs transition"
+                          title={`Écrire à ${r.user.nom} dans le Chat Support`}
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          Contacter
+                        </Link>
+                      )}
                       <button
                         onClick={() => {
                           setNote(r.noteAdmin ?? "");
@@ -379,6 +480,56 @@ export default function RendezVousPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Relance d'un rendez-vous manqué */}
+      <Dialog open={!!aRelancer} onOpenChange={(open) => !open && setARelancer(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#0a2d26] dark:text-emerald-400 text-lg font-bold">
+              <BellRing className="w-5 h-5" />
+              Relancer {aRelancer?.user.nom}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
+              Ce message sera envoyé dans son Chat Support, avec une notification sur son téléphone.
+              Vous pouvez le modifier avant l&apos;envoi.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={texteRelance}
+            onChange={(e) => setTexteRelance(e.target.value)}
+            rows={9}
+            maxLength={2000}
+            className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#15222e] border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-[#0a2d26] dark:focus:border-emerald-500"
+          />
+          {relanceErreur && <p className="text-xs font-semibold text-rose-600">{relanceErreur}</p>}
+          <DialogFooter className="pt-2 flex flex-col-reverse sm:flex-row gap-2">
+            <button
+              onClick={() => setARelancer(null)}
+              className="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={envoyerRelance}
+              disabled={enCours === aRelancer?.id || !texteRelance.trim()}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-5 rounded-xl bg-[#0a2d26] hover:bg-[#0d3b32] text-white font-semibold text-xs disabled:opacity-50 cursor-pointer"
+            >
+              {enCours === aRelancer?.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              {enCours === aRelancer?.id ? "Envoi…" : "Envoyer la relance"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {relanceOk && (
+        <div
+          role="status"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-[#0a2d26] text-white text-sm font-semibold shadow-lg"
+        >
+          <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+          {relanceOk}
         </div>
       )}
 

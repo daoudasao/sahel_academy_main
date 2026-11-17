@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NON_SUPPRIME, versCorbeille } from '../corbeille/corbeille.util';
 import { nomDe } from '../auth/roles.util';
+import { dateDuCreneau, lireIdCreneau } from '../centres/creneaux.util';
 import { CreateRendezVousDto } from './dto/create-rendez-vous.dto';
 import { UpdateRendezVousDto } from './dto/update-rendez-vous.dto';
 
@@ -63,20 +64,27 @@ export class RendezVousService {
   // ─── Côté utilisateur (app) ───
 
   async prendre(userId: string, dto: CreateRendezVousDto) {
+    // Créneau hebdomadaire : l'app envoie « <idCreneau>@<AAAA-MM-JJ> ».
+    const { id: creneauId, jour } = lireIdCreneau(dto.creneauId);
     const creneau = await this.prisma.creneau.findUnique({
-      where: { id: dto.creneauId },
+      where: { id: creneauId },
       include: { centre: { select: { deletedAt: true } } },
     });
     if (!creneau || creneau.centre.deletedAt) {
       throw new NotFoundException('Ce créneau n’est plus disponible.');
     }
-    if (creneau.dateHeure.getTime() <= Date.now()) {
+    const dateHeure = dateDuCreneau(creneau, jour);
+    if (!dateHeure) {
+      throw new BadRequestException('Ce créneau n’est plus disponible.');
+    }
+    if (dateHeure.getTime() <= Date.now()) {
       throw new BadRequestException('Ce créneau est déjà passé.');
     }
     const existant = await this.prisma.rendezVous.findFirst({
       where: {
         userId,
         creneauId: creneau.id,
+        dateHeure,
         statut: { in: STATUTS_ACTIFS },
         ...NON_SUPPRIME,
       },
@@ -90,7 +98,7 @@ export class RendezVousService {
         userId,
         centreId: creneau.centreId,
         creneauId: creneau.id,
-        dateHeure: creneau.dateHeure,
+        dateHeure,
         motif: dto.motif?.trim() || null,
       },
       include: { centre: { select: CENTRE_SELECT } },

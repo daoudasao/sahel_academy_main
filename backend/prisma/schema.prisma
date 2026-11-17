@@ -244,11 +244,19 @@ model Centre {
   @@map("centres")
 }
 
+// Deux sortes de créneaux :
+// - ponctuel : une date précise (dateHeure) ;
+// - hebdomadaire : un jour de la semaine + une heure (jourSemaine + heure),
+//   répété chaque semaine. L'API le déplie en dates concrètes pour l'app.
 model Creneau {
-  id        String   @id @default(cuid())
-  centreId  String
-  dateHeure DateTime
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  centreId    String
+  dateHeure   DateTime?
+  // 1 = lundi … 7 = dimanche (ISO)
+  jourSemaine Int?
+  // "HH:mm", heure de Bamako (UTC+0)
+  heure       String?
+  createdAt   DateTime  @default(now())
 
   centre     Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
   rendezVous RendezVous[]

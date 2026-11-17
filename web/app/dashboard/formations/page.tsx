@@ -28,6 +28,7 @@ import {
   GraduationCap,
   Eye,
 } from "lucide-react";
+import { BadgesNiveau, lireNiveaux } from "@/app/components/Niveaux";
 
 type Statut = "active" | "inactive" | "archive";
 
@@ -98,7 +99,7 @@ export default function FormationsPage() {
       (f.titre || "").toLowerCase().includes(search.toLowerCase()) ||
       (f.formateur?.nom || "").toLowerCase().includes(search.toLowerCase());
     const matchDept = !filterDept || f.departementId === filterDept;
-    const matchNiveau = !filterNiveau || f.niveau === filterNiveau;
+    const matchNiveau = !filterNiveau || lireNiveaux(f.niveau).includes(filterNiveau);
     return matchSearch && matchDept && matchNiveau;
   });
 
@@ -284,17 +285,7 @@ export default function FormationsPage() {
                         <GraduationCap className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         <span>{f.formateur?.nom || "Non assigné"}</span>
                       </div>
-                      <span
-                        className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-semibold mt-1 ${
-                          f.niveau === "Débutant"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : f.niveau === "Intermédiaire"
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : "bg-rose-50 text-rose-700 border border-rose-200"
-                        }`}
-                      >
-                        {f.niveau || "Standard"}
-                      </span>
+                      <BadgesNiveau valeur={f.niveau} className="mt-1" />
                     </td>
 
                     {/* Tarif */}

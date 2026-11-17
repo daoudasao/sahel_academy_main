@@ -92,7 +92,9 @@ export const departementsApi = {
 };
 
 export const centresApi = {
-  list: () => api.get<any[]>("/centres"),
+  // gestion : créneaux tels qu'enregistrés (les hebdomadaires ne sont pas dépliés en dates)
+  list: (opts?: { gestion?: boolean }) =>
+    api.get<any[]>(opts?.gestion ? "/centres?vue=gestion" : "/centres"),
   create: (data: unknown) => api.post<any>("/centres", data),
   update: (id: string, data: unknown) => api.patch<any>(`/centres/${id}`, data),
   remove: (id: string) => api.del(`/centres/${id}`),

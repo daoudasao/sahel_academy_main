@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import InfoBanner from "@/app/components/InfoBanner";
-import { supportApi, uploadApi, BASE } from "@/app/lib/api";
+import { supportApi, uploadApi, usersApi, BASE } from "@/app/lib/api";
 import { io, Socket } from "socket.io-client";
 import {
   Search,
@@ -367,6 +367,39 @@ export default function SupportPage() {
       setMessages([]);
     }
   }, [activeUserId, fetchMessages]);
+
+  // Ouverture via ?user=<id> d'une personne qui n'a encore jamais écrit au support
+  // (ex. depuis « Rendez-vous ») : on ajoute une conversation vide pour pouvoir
+  // lui envoyer le premier message.
+  const ficheChargeeRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeUserId || loadingConversations) return;
+    if (conversations.some((c) => c.id === activeUserId)) return;
+    if (ficheChargeeRef.current === activeUserId) return;
+    ficheChargeeRef.current = activeUserId;
+    usersApi
+      .get(activeUserId)
+      .then((u) => {
+        if (!u) return;
+        setConversations((prev) =>
+          prev.some((c) => c.id === u.id)
+            ? prev
+            : [
+                {
+                  id: u.id,
+                  nom: u.nom || u.name || u.email || "Utilisateur",
+                  email: u.email ?? "",
+                  telephone: u.telephone ?? null,
+                  image: u.image ?? null,
+                  lastMessage: null,
+                  unreadCount: 0,
+                },
+                ...prev,
+              ]
+        );
+      })
+      .catch((err) => console.error("Impossible de charger la fiche de l'utilisateur :", err));
+  }, [activeUserId, conversations, loadingConversations]);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => c.id === activeUserId) || null,

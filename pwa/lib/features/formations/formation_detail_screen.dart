@@ -241,10 +241,8 @@ class _FormationDetailScreenState extends State<FormationDetailScreen> {
                             icon: iconeDepartement(departement.id),
                             label: departement.nom,
                           ),
-                        _InfoChip(
-                          icon: Icons.bar_chart,
-                          label: formation.niveau,
-                        ),
+                        for (final niveau in formation.niveaux)
+                          _InfoChip(icon: Icons.bar_chart, label: niveau),
                       ],
                     ),
                     const SizedBox(height: 20),
