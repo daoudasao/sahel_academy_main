@@ -78,7 +78,7 @@ class _CentresScreenState extends State<CentresScreen> {
                     child: Column(
                       children: [
                         Icon(
-                          Icons.location_off_outlined,
+                          Icons.place_outlined,
                           size: 48,
                           color: scheme.outline,
                         ),
@@ -167,7 +167,7 @@ class _CarteCentre extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      Icons.apartment_rounded,
+                      Icons.location_on,
                       color: scheme.onPrimaryContainer,
                     ),
                   ),
