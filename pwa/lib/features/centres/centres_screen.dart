@@ -326,6 +326,19 @@ class _FeuilleReservationState extends State<_FeuilleReservation> {
     return groupes;
   }
 
+  /// « de 9h à 17h » si les créneaux du jour viennent d'une plage.
+  static String? _plage(List<CreneauCentre> jour) {
+    final c = jour.isEmpty ? null : jour.first;
+    if (c?.debut == null || c?.fin == null) return null;
+    String h(String x) {
+      final p = x.split(':');
+      final heure = int.tryParse(p.first) ?? 0;
+      return p.length < 2 || p[1] == '00' ? '${heure}h' : '${heure}h${p[1]}';
+    }
+
+    return 'de ${h(c!.debut!)} à ${h(c.fin!)}';
+  }
+
   Future<void> _reserver() async {
     final creneau = _creneau;
     if (creneau == null) return;
@@ -429,6 +442,14 @@ class _FeuilleReservationState extends State<_FeuilleReservation> {
             const SizedBox(height: 20),
 
             _etape(context, '2. L\'heure'),
+            if (_plage(heures) case final plage?)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  'Le centre te reçoit $plage. Choisis l\'heure qui t\'arrange.',
+                  style: TextStyle(color: scheme.onSurfaceVariant, height: 1.3),
+                ),
+              ),
             Wrap(
               spacing: 8,
               runSpacing: 8,

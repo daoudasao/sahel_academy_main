@@ -39,7 +39,12 @@ void main() {
       'adresse': 'ACI 2000',
       'telephone': '',
       'creneaux': [
-        {'id': 'cr1@x', 'dateHeure': _iso(j1)},
+        {
+          'id': 'cr1@x',
+          'dateHeure': _iso(j1),
+          'debut': '09:00',
+          'fin': '17:00',
+        },
         {
           'id': 'cr2@x',
           'dateHeure': _iso(j1.add(const Duration(hours: 5, minutes: 30))),
@@ -78,6 +83,7 @@ void main() {
     expect(find.text('09:00'), findsOneWidget);
     expect(find.text('14:30'), findsOneWidget);
     expect(find.text('Choisis une heure'), findsOneWidget);
+    expect(find.textContaining('de 9h à 17h'), findsOneWidget);
 
     await tester.tap(find.text('14:30'));
     await tester.pumpAndSettle();

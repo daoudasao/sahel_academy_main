@@ -87,23 +87,19 @@ export class CentresService {
 
   async addCreneau(centreId: string, dto: CreateCreneauDto) {
     await this.findOne(centreId, true);
-    if (dto.jourSemaine && dto.heure) {
-      const existant = await this.prisma.creneau.findFirst({
-        where: { centreId, jourSemaine: dto.jourSemaine, heure: dto.heure },
-      });
-      if (existant) return existant;
-      return this.prisma.creneau.create({
-        data: { centreId, jourSemaine: dto.jourSemaine, heure: dto.heure },
-      });
+    if (dto.heureFin <= dto.heure) {
+      throw new BadRequestException(
+        'L’heure de fin doit être après l’heure de début.',
+      );
     }
-    if (dto.dateHeure) {
-      return this.prisma.creneau.create({
-        data: { centreId, dateHeure: new Date(dto.dateHeure) },
-      });
-    }
-    throw new BadRequestException(
-      'Indiquez un jour de la semaine et une heure, ou une date précise.',
-    );
+    const donnees = {
+      centreId,
+      jourSemaine: dto.jourSemaine,
+      heure: dto.heure,
+      heureFin: dto.heureFin,
+    };
+    const existant = await this.prisma.creneau.findFirst({ where: donnees });
+    return existant ?? this.prisma.creneau.create({ data: donnees });
   }
 
   async removeCreneau(creneauId: string) {

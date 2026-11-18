@@ -3,7 +3,17 @@ class CreneauCentre {
   final String id;
   final DateTime dateHeure;
 
-  const CreneauCentre({required this.id, required this.dateHeure});
+  /// Plage de disponibilité du jour (« 09:00 » → « 17:00 »), si le centre
+  /// ouvre sur une plage plutôt qu'à heure fixe.
+  final String? debut;
+  final String? fin;
+
+  const CreneauCentre({
+    required this.id,
+    required this.dateHeure,
+    this.debut,
+    this.fin,
+  });
 }
 
 /// Un centre où l'on peut prendre rendez-vous, avec ses créneaux disponibles
@@ -54,7 +64,14 @@ class Centre {
         final d = DateTime.tryParse('${e['dateHeure'] ?? ''}');
         final id = e['id']?.toString();
         if (d != null && id != null) {
-          creneaux.add(CreneauCentre(id: id, dateHeure: d.toLocal()));
+          creneaux.add(
+            CreneauCentre(
+              id: id,
+              dateHeure: d.toLocal(),
+              debut: e['debut']?.toString(),
+              fin: e['fin']?.toString(),
+            ),
+          );
         }
       }
     }

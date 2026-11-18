@@ -1,38 +1,21 @@
-import {
-  IsDateString,
-  IsInt,
-  IsOptional,
-  Matches,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsInt, Matches, Max, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-/**
- * Soit un créneau ponctuel (`dateHeure`), soit un créneau hebdomadaire
- * (`jourSemaine` + `heure`).
- */
-export class CreateCreneauDto {
-  @ApiProperty({ example: '2026-09-08T09:00:00Z', required: false })
-  @IsDateString()
-  @IsOptional()
-  dateHeure?: string;
+const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-  @ApiProperty({
-    example: 1,
-    description: '1 = lundi … 7 = dimanche',
-    required: false,
-  })
+/** Plage de disponibilité hebdomadaire : un jour, de `heure` à `heureFin`. */
+export class CreateCreneauDto {
+  @ApiProperty({ example: 1, description: '1 = lundi … 7 = dimanche' })
   @IsInt()
   @Min(1)
   @Max(7)
-  @IsOptional()
-  jourSemaine?: number;
+  jourSemaine: number;
 
-  @ApiProperty({ example: '09:30', required: false })
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {
-    message: 'Heure attendue au format HH:mm.',
-  })
-  @IsOptional()
-  heure?: string;
+  @ApiProperty({ example: '09:00', description: 'Début de la disponibilité' })
+  @Matches(HEURE, { message: 'Heure de début attendue au format HH:mm.' })
+  heure: string;
+
+  @ApiProperty({ example: '17:00', description: 'Fin de la disponibilité' })
+  @Matches(HEURE, { message: 'Heure de fin attendue au format HH:mm.' })
+  heureFin: string;
 }

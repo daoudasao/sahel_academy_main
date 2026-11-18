@@ -1,21 +1,16 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
-import InfoBanner from "@/app/components/InfoBanner";
+import { useState, useEffect } from "react";
 import { formatCreneau } from "@/app/lib/mock-data";
 import { centresApi } from "@/app/lib/api";
 import SelecteurPosition from "./SelecteurPosition";
 import {
   MapPin,
   Phone,
-  Clock,
   Plus,
   Trash2,
   Edit2,
-  ChevronDown,
-  Sparkles,
   Building2,
-  Calendar,
   X,
   Search,
   Navigation,
@@ -61,12 +56,18 @@ interface Creneau {
   dateHeure?: string | null;
   jourSemaine?: number | null;
   heure?: string | null;
+  heureFin?: string | null;
 }
 
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
+const h = (x: string) => x.replace(":", "h");
+
 function libelleCreneau(cr: Creneau): string {
-  if (cr.jourSemaine && cr.heure) return `Chaque ${JOURS[cr.jourSemaine - 1].toLowerCase()} · ${cr.heure.replace(":", "h")}`;
+  if (cr.jourSemaine && cr.heure) {
+    const jour = JOURS[cr.jourSemaine - 1];
+    return cr.heureFin ? `${jour} · de ${h(cr.heure)} à ${h(cr.heureFin)}` : `${jour} · ${h(cr.heure)}`;
+  }
   return cr.dateHeure ? formatCreneau(cr.dateHeure) : "—";
 }
 
@@ -76,8 +77,8 @@ function cleCreneau(cr: Creneau): string {
   return `1-${cr.dateHeure ?? ""}`;
 }
 
-type SaisieCreneau = { mode: "hebdo" | "date"; jours: number[]; heure: string; date: string };
-const SAISIE_VIDE: SaisieCreneau = { mode: "hebdo", jours: [], heure: "", date: "" };
+type SaisieCreneau = { jours: number[]; debut: string; fin: string };
+const SAISIE_VIDE: SaisieCreneau = { jours: [], debut: "09:00", fin: "17:00" };
 
 interface Centre {
   id: string;
@@ -95,7 +96,6 @@ export default function CentresPage() {
   const [centres, setCentres] = useState<Centre[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Formulaire & Modal Édition / Création
   const [modalOpen, setModalOpen] = useState(false);
@@ -111,11 +111,11 @@ export default function CentresPage() {
   // Input créneau par centre
   const [newSlotMap, setNewSlotMap] = useState<Record<string, SaisieCreneau>>({});
   const [ajoutEnCours, setAjoutEnCours] = useState(false);
+  const [slotCentre, setSlotCentre] = useState<Centre | null>(null);
   const saisieDe = (id: string) => newSlotMap[id] ?? SAISIE_VIDE;
   const majSaisie = (id: string, maj: Partial<SaisieCreneau>) =>
     setNewSlotMap((prev) => ({ ...prev, [id]: { ...(prev[id] ?? SAISIE_VIDE), ...maj } }));
-  const saisieValide = (x: SaisieCreneau) =>
-    x.mode === "hebdo" ? x.jours.length > 0 && !!x.heure : !!x.date;
+  const saisieValide = (x: SaisieCreneau) => x.jours.length > 0 && !!x.debut && !!x.fin && x.fin > x.debut;
 
   useEffect(() => {
     (async () => {
@@ -212,14 +212,12 @@ export default function CentresPage() {
     setAjoutEnCours(true);
     try {
       // Un créneau par jour coché (le serveur ignore les doublons).
-      const crees: Creneau[] =
-        saisie.mode === "hebdo"
-          ? await Promise.all(
-              saisie.jours.map((jourSemaine) =>
-                centresApi.addCreneau(centreId, { jourSemaine, heure: saisie.heure })
-              )
-            )
-          : [await centresApi.addCreneau(centreId, { dateHeure: new Date(saisie.date).toISOString() })];
+      // Une plage par jour coché (le serveur ignore les doublons).
+      const crees: Creneau[] = await Promise.all(
+        saisie.jours.map((jourSemaine) =>
+          centresApi.addCreneau(centreId, { jourSemaine, heure: saisie.debut, heureFin: saisie.fin })
+        )
+      );
       setCentres((cs) =>
         cs.map((c) => {
           if (c.id !== centreId) return c;
@@ -227,7 +225,8 @@ export default function CentresPage() {
           return { ...c, creneaux: [...c.creneaux, ...nouveaux] };
         })
       );
-      setNewSlotMap((prev) => ({ ...prev, [centreId]: { ...SAISIE_VIDE, mode: saisie.mode } }));
+      setNewSlotMap((prev) => ({ ...prev, [centreId]: { ...SAISIE_VIDE, debut: saisie.debut, fin: saisie.fin } }));
+      setSlotCentre(null);
     } catch (err) {
       console.error("Erreur lors de l'ajout du créneau:", err);
     } finally {
@@ -255,372 +254,265 @@ export default function CentresPage() {
       (c.adresse || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalCreneaux = centres.reduce((s, c) => s + c.creneaux.length, 0);
+
+  // Styles communs : variables du thème (clair / sombre) pour rester lisible partout.
+  const carte = "bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl";
+  const texte = "text-[var(--text-primary)]";
+  const texteDoux = "text-[var(--text-secondary)]";
+  const btnPrincipal =
+    "inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--bg-card)] text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
+  const btnSecondaire =
+    "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--border-color-strong)] text-[var(--text-primary)] hover:bg-[var(--bg-sidebar-hover)] text-sm font-medium transition cursor-pointer";
+  const pastille =
+    "inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm text-[var(--text-primary)]";
+
+  const saisie = slotCentre ? saisieDe(slotCentre.id) : SAISIE_VIDE;
+  const resume =
+    saisieValide(saisie)
+      ? `Chaque ${saisie.jours.map((j) => JOURS[j - 1].toLowerCase()).join(", ")}, de ${h(saisie.debut)} à ${h(saisie.fin)}. Les candidats choisiront une heure dans cette plage.`
+      : null;
+  const finAvantDebut = !!saisie.debut && !!saisie.fin && saisie.fin <= saisie.debut;
 
   return (
-    <div className="w-full max-w-full space-y-4">
-      {/* Compact Green Header */}
-      <div className="w-full bg-gradient-to-r from-[#0a2d26] via-[#0d3b32] to-[#124b40] rounded-xl sm:rounded-2xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-semibold border border-emerald-500/30">
-              <Sparkles className="w-3 h-3" />
-              <span>Lieux d&apos;accueil &amp; examens</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-              Centres d&apos;Examen &amp; Créneaux
-            </h1>
-            <p className="text-xs text-emerald-100/75 leading-relaxed">
-              Gérez les implantations physiques et planifiez les créneaux de rendez-vous.
-            </p>
-          </div>
-
-          <div className="w-full sm:w-auto">
-            <button
-              onClick={openNew}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#0a2d26] font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Nouveau centre</span>
-            </button>
-          </div>
+    <div className="w-full max-w-4xl space-y-5">
+      {/* En-tête */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <div>
+          <h1 className={`text-2xl font-bold ${texte}`}>Centres</h1>
+          <p className={`text-sm mt-1 ${texteDoux}`}>
+            Les lieux où les candidats prennent rendez-vous depuis l&apos;application, et leurs horaires.
+          </p>
         </div>
-
-        {/* Compact Stat Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 pt-3 border-t border-white/10 text-xs">
-          <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-            <Building2 className="w-4 h-4 text-emerald-300 shrink-0" />
-            <span className="text-emerald-100/70 font-medium">Centres:</span>
-            <span className="font-bold text-white">{centres.length}</span>
-          </div>
-
-          <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-            <Clock className="w-4 h-4 text-indigo-300 shrink-0" />
-            <span className="text-emerald-100/70 font-medium">Créneaux ouverts:</span>
-            <span className="font-bold text-white">{totalCreneaux}</span>
-          </div>
-
-          <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-            <MapPin className="w-4 h-4 text-amber-300 shrink-0" />
-            <span className="text-emerald-100/70 font-medium">Visibles:</span>
-            <span className="font-bold text-white">{filtered.length}</span>
-          </div>
-        </div>
+        <button onClick={openNew} className={btnPrincipal}>
+          <Plus className="w-4 h-4" />
+          Nouveau centre
+        </button>
       </div>
 
-      <InfoBanner>
-        <strong>Objectif :</strong> Configurer les centres physiques et leurs créneaux disponibles pour les rendez-vous.<br />
-        <strong>Utilité :</strong> Permet aux candidats admis de sélectionner un créneau de visite directement depuis l&apos;application mobile.
-      </InfoBanner>
-
-      {/* Barre de Recherche */}
-      <div className="w-full flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      {centres.length > 3 && (
+        <div className="relative">
+          <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${texteDoux}`} />
           <input
             type="text"
-            placeholder="Rechercher par nom, ville ou adresse..."
-            className="w-full pl-10 pr-10 py-2.5 bg-slate-50 sm:bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a2d26]/20 focus:border-[#0a2d26] transition-all"
+            placeholder="Rechercher un centre…"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-input)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
         </div>
+      )}
 
-        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-          <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-2 rounded-xl">
-            {filtered.length} {filtered.length > 1 ? "résultats" : "résultat"}
-          </span>
-        </div>
-      </div>
-
-      {/* Tableau des Centres - Réactif */}
       {filtered.length === 0 ? (
-        <div className="w-full text-center py-16 bg-white border-2 border-dashed border-slate-200 rounded-3xl p-6">
-          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-100">
-            <Building2 className="w-8 h-8" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900 mb-1">
-            {loading ? "Chargement des centres..." : "Aucun centre trouvé"}
-          </h3>
-          <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
-            {loading
-              ? "Veuillez patienter pendant la récupération des implantations..."
-              : "Aucun centre ne correspond à vos critères de recherche."}
+        <div className={`${carte} text-center py-14 px-6`}>
+          <Building2 className={`w-10 h-10 mx-auto mb-3 ${texteDoux}`} />
+          <p className={`font-semibold ${texte}`}>
+            {loading ? "Chargement…" : centres.length ? "Aucun centre ne correspond" : "Aucun centre pour l'instant"}
           </p>
-          {!loading && (
-            <button
-              onClick={openNew}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0a2d26] text-white text-sm font-semibold hover:bg-[#0d3b32] transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              Nouveau centre
-            </button>
+          {!loading && centres.length === 0 && (
+            <p className={`text-sm mt-1 ${texteDoux}`}>Ajoutez votre premier centre pour ouvrir les rendez-vous.</p>
           )}
         </div>
       ) : (
-        <div className="table-responsive bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                <th className="py-3.5 px-4">Centre &amp; Ville</th>
-                <th className="py-3.5 px-4">Adresse &amp; Contact</th>
-                <th className="py-3.5 px-4">Créneaux</th>
-                <th className="py-3.5 px-4 text-right">Actions Admin</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {filtered.map((c) => {
-                const creneaux = [...c.creneaux].sort((a, b) => (cleCreneau(a) < cleCreneau(b) ? -1 : 1));
-                const isExpanded = expandedId === c.id;
+        <div className="space-y-4">
+          {filtered.map((c) => {
+            const creneaux = [...c.creneaux].sort((a, b) => (cleCreneau(a) < cleCreneau(b) ? -1 : 1));
+            const hebdo = creneaux.filter((cr) => cr.jourSemaine && cr.heure);
+            const dates = creneaux.filter((cr) => !(cr.jourSemaine && cr.heure));
+            const lien = lienCarte(c);
 
-                return (
-                  <Fragment key={c.id}>
-                    <tr className={`hover:bg-slate-50/80 transition-colors ${isExpanded ? "bg-slate-50/60" : ""}`}>
-                      {/* Centre & Ville */}
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0a2d26] via-[#0d3b32] to-[#124b40] text-emerald-300 flex items-center justify-center shrink-0 shadow-xs">
-                            <Building2 className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 text-sm">{c.nom}</div>
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 mt-0.5">
-                              <MapPin className="w-3 h-3" />
-                              {c.ville || "Ville non précisée"}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Adresse & Contact */}
-                      <td className="py-3.5 px-4 text-xs text-slate-600 space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{c.adresse || "Adresse non renseignée"}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{c.telephone || "Téléphone non renseigné"}</span>
-                        </div>
-                        {lienCarte(c) ? (
-                          <a
-                            href={lienCarte(c)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 hover:underline"
-                          >
-                            <Navigation className="w-3.5 h-3.5 shrink-0" />
-                            <span>Voir sur la carte</span>
-                          </a>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-amber-600">
-                            <Navigation className="w-3.5 h-3.5 shrink-0" />
-                            <span>Localisation GPS non renseignée</span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Créneaux */}
-                      <td className="py-3.5 px-4">
-                        <button
-                          onClick={() => setExpandedId(isExpanded ? null : c.id)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-                            isExpanded
-                              ? "bg-[#0a2d26] text-white border-[#0a2d26] shadow-xs"
-                              : "bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100"
-                          }`}
-                          title={isExpanded ? "Masquer les créneaux" : "Gérer les créneaux horaire"}
+            return (
+              <section key={c.id} className={`${carte} p-5`}>
+                {/* Infos du centre */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className={`text-lg font-bold ${texte}`}>{c.nom}</h2>
+                    <div className={`mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm ${texteDoux}`}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 shrink-0" />
+                        {[c.ville, c.adresse].filter(Boolean).join(" · ") || "Adresse non renseignée"}
+                      </span>
+                      {c.telephone && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Phone className="w-4 h-4 shrink-0" />
+                          {c.telephone}
+                        </span>
+                      )}
+                      {lien ? (
+                        <a
+                          href={lien}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 font-semibold text-[var(--text-sidebar-active)] hover:underline"
                         >
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{creneaux.length} créneau{creneaux.length > 1 ? "x" : ""}</span>
-                          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180 text-emerald-300" : "text-indigo-600"}`} />
-                        </button>
-                      </td>
+                          <Navigation className="w-4 h-4 shrink-0" />
+                          Voir sur la carte
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-[var(--accent-warning,#d97706)]">
+                          <Navigation className="w-4 h-4 shrink-0" />
+                          Position non renseignée
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => openEdit(c)} className={btnSecondaire}>
+                      <Edit2 className="w-4 h-4" />
+                      Modifier
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeletingId(c.id);
+                        setDeletingName(c.nom);
+                      }}
+                      className={`${btnSecondaire} !text-[var(--accent-danger)]`}
+                      title="Supprimer ce centre"
+                      aria-label="Supprimer ce centre"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
 
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center justify-end gap-1.5">
-                          <button
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition cursor-pointer"
-                            onClick={() => openEdit(c)}
-                            title="Modifier ce centre"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            <span>Modifier</span>
-                          </button>
-                          <button
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-xs transition cursor-pointer"
-                            onClick={() => {
-                              setDeletingId(c.id);
-                              setDeletingName(c.nom);
-                            }}
-                            title="Supprimer ce centre"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Supprimer</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                {/* Horaires de rendez-vous */}
+                <div className="mt-5 pt-4 border-t border-[var(--border-color)]">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <h3 className={`font-semibold ${texte}`}>
+                      Disponibilités
+                      <span className={`ml-2 text-sm font-normal ${texteDoux}`}>({creneaux.length})</span>
+                    </h3>
+                    <button onClick={() => setSlotCentre(c)} className={btnSecondaire}>
+                      <Plus className="w-4 h-4" />
+                      Ajouter
+                    </button>
+                  </div>
 
-                    {/* Ligne accordéon de gestion des créneaux */}
-                    {isExpanded && (
-                      <tr className="bg-slate-50/90 border-b border-slate-200/60">
-                        <td colSpan={4} className="px-6 py-4">
-                          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-4 animate-in fade-in duration-200">
-                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-indigo-600" />
-                                <span>Créneaux horaire disponibles — {c.nom} ({creneaux.length})</span>
-                              </h4>
-                              <button
-                                onClick={() => setExpandedId(null)}
-                                className="text-xs text-slate-400 hover:text-slate-600 font-medium"
-                              >
-                                Masquer
-                              </button>
-                            </div>
-
-                            {/* Badges de créneaux */}
+                  {creneaux.length === 0 ? (
+                    <p className={`text-sm ${texteDoux}`}>
+                      Aucune disponibilité : les candidats ne peuvent pas encore réserver dans ce centre.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {[
+                        ["Chaque semaine", hebdo],
+                        ["Anciennes dates (à retirer)", dates],
+                      ].map(([titre, liste]) =>
+                        (liste as Creneau[]).length === 0 ? null : (
+                          <div key={titre as string}>
+                            <p className={`text-xs font-medium mb-1.5 ${texteDoux}`}>{titre as string}</p>
                             <div className="flex flex-wrap gap-2">
-                              {creneaux.length === 0 ? (
-                                <span className="text-xs text-slate-400 italic py-1">
-                                  Aucun créneau configuré pour ce centre.
-                                </span>
-                              ) : (
-                                creneaux.map((cr) => (
-                                  <span
-                                    key={cr.id}
-                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200/80 text-xs font-medium"
+                              {(liste as Creneau[]).map((cr) => (
+                                <span key={cr.id} className={pastille}>
+                                  {libelleCreneau(cr)}
+                                  <button
+                                    onClick={() => removeSlot(c.id, cr.id)}
+                                    className={`p-1 rounded-lg ${texteDoux} hover:text-[var(--accent-danger)] hover:bg-[var(--bg-sidebar-hover)] transition cursor-pointer`}
+                                    title="Retirer"
+                                    aria-label="Retirer cette disponibilité"
                                   >
-                                    <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                    <span>{libelleCreneau(cr)}</span>
-                                    <button
-                                      onClick={() => removeSlot(c.id, cr.id)}
-                                      className="text-indigo-400 hover:text-red-600 p-0.5 rounded-md hover:bg-indigo-100/80 transition"
-                                      title="Supprimer ce créneau"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                    </button>
-                                  </span>
-                                ))
-                              )}
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </span>
+                              ))}
                             </div>
-
-                            {/* Formulaire d'ajout de créneau : chaque semaine (jours + heure) ou date précise */}
-                            {(() => {
-                              const saisie = saisieDe(c.id);
-                              return (
-                                <div className="space-y-3 pt-3 border-t border-slate-100">
-                                  <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold">
-                                    {(
-                                      [
-                                        ["hebdo", "Chaque semaine"],
-                                        ["date", "Date précise"],
-                                      ] as const
-                                    ).map(([mode, label]) => (
-                                      <button
-                                        key={mode}
-                                        type="button"
-                                        onClick={() => majSaisie(c.id, { mode })}
-                                        className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                                          saisie.mode === mode ? "bg-white text-[#0a2d26] shadow-2xs" : "text-slate-500 hover:text-slate-700"
-                                        }`}
-                                      >
-                                        {label}
-                                      </button>
-                                    ))}
-                                  </div>
-
-                                  {saisie.mode === "hebdo" ? (
-                                    <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {JOURS.map((nom, i) => {
-                                          const jour = i + 1;
-                                          const actif = saisie.jours.includes(jour);
-                                          return (
-                                            <button
-                                              key={jour}
-                                              type="button"
-                                              aria-pressed={actif}
-                                              onClick={() =>
-                                                majSaisie(c.id, {
-                                                  jours: actif
-                                                    ? saisie.jours.filter((x) => x !== jour)
-                                                    : [...saisie.jours, jour].sort(),
-                                                })
-                                              }
-                                              className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
-                                                actif
-                                                  ? "bg-[#0a2d26] border-[#0a2d26] text-white"
-                                                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                                              }`}
-                                            >
-                                              {nom.slice(0, 3)}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                      <input
-                                        type="time"
-                                        aria-label="Heure du créneau"
-                                        className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2d26]"
-                                        value={saisie.heure}
-                                        onChange={(e) => majSaisie(c.id, { heure: e.target.value })}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <input
-                                      type="datetime-local"
-                                      aria-label="Date et heure du créneau"
-                                      className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a2d26]"
-                                      value={saisie.date}
-                                      onChange={(e) => majSaisie(c.id, { date: e.target.value })}
-                                    />
-                                  )}
-
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-                                    <button
-                                      onClick={() => addSlot(c.id)}
-                                      disabled={!saisieValide(saisie) || ajoutEnCours}
-                                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#0a2d26] hover:bg-[#0d3b32] text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      <span>
-                                        {saisie.mode === "hebdo" && saisie.jours.length > 1
-                                          ? `Ajouter ces ${saisie.jours.length} créneaux`
-                                          : "Ajouter ce créneau"}
-                                      </span>
-                                    </button>
-                                    {saisie.mode === "hebdo" && (
-                                      <span className="text-[11px] text-slate-400">
-                                        Répété chaque semaine ; l&apos;app propose les dates des 2 prochaines semaines.
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })()}
                           </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
+
+      {/* Ajout d'un horaire */}
+      <Dialog open={!!slotCentre} onOpenChange={(open) => !open && setSlotCentre(null)}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className={`text-lg font-bold ${texte}`}>Ajouter une disponibilité</DialogTitle>
+            <DialogDescription className={`text-sm ${texteDoux}`}>{slotCentre?.nom}</DialogDescription>
+          </DialogHeader>
+
+          {slotCentre && (
+            <div className="space-y-5 py-1">
+              <div>
+                <p className={`text-sm font-medium mb-2 ${texte}`}>Quels jours ?</p>
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                  {JOURS.map((nom, i) => {
+                    const jour = i + 1;
+                    const actif = saisie.jours.includes(jour);
+                    return (
+                      <button
+                        key={jour}
+                        type="button"
+                        aria-pressed={actif}
+                        onClick={() =>
+                          majSaisie(slotCentre.id, {
+                            jours: actif ? saisie.jours.filter((x) => x !== jour) : [...saisie.jours, jour].sort(),
+                          })
+                        }
+                        className={`py-2 rounded-lg border text-sm font-semibold transition cursor-pointer ${
+                          actif
+                            ? "bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--bg-card)]"
+                            : `border-[var(--border-color)] ${texte} hover:bg-[var(--bg-sidebar-hover)]`
+                        }`}
+                      >
+                        {nom.slice(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className={`text-sm font-medium mb-2 ${texte}`}>Disponible</p>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${texteDoux}`}>de</span>
+                  <input
+                    type="time"
+                    aria-label="Heure de début"
+                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-input)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                    value={saisie.debut}
+                    onChange={(e) => majSaisie(slotCentre.id, { debut: e.target.value })}
+                  />
+                  <span className={`text-sm ${texteDoux}`}>à</span>
+                  <input
+                    type="time"
+                    aria-label="Heure de fin"
+                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-input)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                    value={saisie.fin}
+                    onChange={(e) => majSaisie(slotCentre.id, { fin: e.target.value })}
+                  />
+                </div>
+                {finAvantDebut && (
+                  <p className="text-xs mt-1.5 text-[var(--accent-danger)]">L&apos;heure de fin doit être après l&apos;heure de début.</p>
+                )}
+              </div>
+
+              {resume && (
+                <p className="text-sm px-3 py-2 rounded-xl bg-[var(--bg-sidebar-active)] text-[var(--text-sidebar-active)] font-medium">
+                  {resume}
+                </p>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="pt-2 flex flex-col-reverse sm:flex-row gap-2">
+            <button className={btnSecondaire} onClick={() => setSlotCentre(null)} disabled={ajoutEnCours}>
+              Annuler
+            </button>
+            <button
+              className={btnPrincipal}
+              onClick={() => slotCentre && addSlot(slotCentre.id)}
+              disabled={!saisieValide(saisie) || ajoutEnCours}
+            >
+              {ajoutEnCours ? "Ajout…" : "Ajouter"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Création / Modification Centre */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

@@ -256,6 +256,8 @@ model Creneau {
   jourSemaine Int?
   // "HH:mm", heure de Bamako (UTC+0)
   heure       String?
+  // Fin de la plage « HH:mm » (null = créneau à heure unique, ancien format)
+  heureFin    String?
   createdAt   DateTime  @default(now())
 
   centre     Centre       @relation(fields: [centreId], references: [id], onDelete: Cascade)
