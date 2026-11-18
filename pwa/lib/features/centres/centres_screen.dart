@@ -393,9 +393,19 @@ class _FeuilleReservationState extends State<_FeuilleReservation> {
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             if (widget.centre.ville.isNotEmpty)
-              Text(
-                widget.centre.ville,
-                style: TextStyle(color: scheme.onSurfaceVariant),
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 16,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    widget.centre.ville,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                ],
               ),
             const SizedBox(height: 20),
 
