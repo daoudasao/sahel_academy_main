@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api/api_client.dart';
@@ -157,103 +158,142 @@ class _CarteRendezVous extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final couleur = _couleur(scheme);
     final actif = rdv.aVenir && rdv.statut.annulable;
+    final d = rdv.dateHeure;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    formatCreneauLong(rdv.dateHeure),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: couleur.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    rdv.statut.libelle,
-                    style: TextStyle(
-                      color: couleur,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 18,
-                  color: scheme.outline,
+                // Bloc date : jour + mois, lisible d'un coup d'œil.
+                Container(
+                  width: 56,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: actif
+                        ? scheme.primaryContainer
+                        : scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${d.day}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: actif
+                              ? scheme.onPrimaryContainer
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        DateFormat('MMM', 'fr_FR').format(d),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: actif
+                              ? scheme.onPrimaryContainer
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    [
-                      rdv.centre.nom,
-                      if (rdv.centre.adresse.isNotEmpty) rdv.centre.adresse,
-                      if (rdv.centre.ville.isNotEmpty) rdv.centre.ville,
-                    ].join(' · '),
-                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        rdv.centre.nom,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${formatJourCreneau(d)} · ${formatHeure(d)}',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: couleur,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              rdv.statut.libelle,
+                              style: TextStyle(
+                                color: couleur,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (rdv.motif != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          rdv.motif!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
             ),
-            if (rdv.motif != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Motif : ${rdv.motif}',
-                style: TextStyle(color: scheme.onSurfaceVariant),
-              ),
-            ],
             if (actif) ...[
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              Row(
                 children: [
-                  if (rdv.centre.localisable)
-                    FilledButton.tonalIcon(
-                      onPressed: () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        if (!await ouvrirItineraire(rdv.centre)) {
-                          messenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Impossible d\'ouvrir la carte.'),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.directions_outlined),
-                      label: const Text('Itinéraire'),
-                    ),
                   if (onAnnuler != null)
-                    TextButton.icon(
-                      onPressed: onAnnuler,
-                      style: TextButton.styleFrom(
-                        foregroundColor: scheme.error,
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onAnnuler,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: scheme.error,
+                        ),
+                        child: const Text('Annuler'),
                       ),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Annuler'),
+                    ),
+                  if (onAnnuler != null && rdv.centre.localisable)
+                    const SizedBox(width: 8),
+                  if (rdv.centre.localisable)
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          if (!await ouvrirItineraire(rdv.centre)) {
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Impossible d\'ouvrir la carte.'),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.directions_outlined),
+                        label: const Text('Itinéraire'),
+                      ),
                     ),
                 ],
               ),

@@ -64,18 +64,29 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 2 jours distincts, 3 créneaux à venir, le créneau passé est masqué.
-    expect(find.byType(ActionChip), findsNWidgets(3));
-    expect(find.text('09:00'), findsNWidgets(2));
+    // Carte compacte : prochain créneau affiché, pas la liste complète.
+    expect(find.textContaining('Prochain :'), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsNothing);
+
+    await tester.tap(find.text('Choisir un créneau'));
+    await tester.pumpAndSettle();
+
+    // 2 jours distincts (le créneau passé est masqué) ; jour 1 = 2 heures.
+    expect(find.text('${j1.day}'), findsOneWidget);
+    expect(find.text('${j8.day}'), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsNWidgets(2));
+    expect(find.text('09:00'), findsOneWidget);
     expect(find.text('14:30'), findsOneWidget);
-    expect(
-      find.textContaining(RegExp(r'^[A-Z][a-zé]+ \d+ ')),
-      findsNWidgets(2),
-    );
+    expect(find.text('Choisis une heure'), findsOneWidget);
 
     await tester.tap(find.text('14:30'));
     await tester.pumpAndSettle();
-    expect(find.text('Confirmer le rendez-vous'), findsOneWidget);
     expect(find.textContaining('à 14h30'), findsOneWidget);
+
+    // Changer de jour : une seule heure, sélection remise à zéro.
+    await tester.tap(find.text('${j8.day}'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ChoiceChip), findsOneWidget);
+    expect(find.text('Choisis une heure'), findsOneWidget);
   });
 }

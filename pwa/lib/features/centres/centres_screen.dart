@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/utils/format.dart';
@@ -10,9 +12,9 @@ import '../../data/repositories/rendez_vous_repository.dart';
 import '../../models/centre.dart';
 import '../../widgets/erreur_chargement.dart';
 
-/// Liste des centres avec leur localisation (bouton « Itinéraire ») ; permet
-/// de choisir un créneau et de prendre rendez-vous. Le rendez-vous est
-/// enregistré côté serveur puis confirmé par l'équipe depuis le dashboard.
+/// Prise de rendez-vous : liste compacte des centres. Un appui sur
+/// « Choisir un créneau » ouvre une feuille unique (jour → heure → confirmer).
+/// Le rendez-vous est enregistré côté serveur puis confirmé par l'équipe.
 class CentresScreen extends StatefulWidget {
   const CentresScreen({super.key});
 
@@ -44,10 +46,10 @@ class _CentresScreenState extends State<CentresScreen> {
       appBar: AppBar(
         title: const Text('Prendre rendez-vous'),
         actions: [
-          TextButton.icon(
+          IconButton(
+            tooltip: 'Mes rendez-vous',
             onPressed: () => context.push('/rendez-vous'),
             icon: const Icon(Icons.event_note_outlined),
-            label: const Text('Mes RDV'),
           ),
         ],
       ),
@@ -63,35 +65,42 @@ class _CentresScreenState extends State<CentresScreen> {
           final centres = repo.getCentres();
           return RefreshIndicator(
             onRefresh: () async {
-              setState(() {
-                _future = repo.charger(forcer: true);
-              });
+              setState(() => _future = repo.charger(forcer: true));
               await _future;
             },
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
                 if (centres.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Text(
-                        'Aucun centre disponible pour le moment.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: scheme.outline),
-                      ),
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.location_off_outlined,
+                          size: 48,
+                          color: scheme.outline,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Aucun centre disponible pour le moment.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
                     ),
                   )
                 else ...[
-                  Text(
-                    'Choisis un centre proche de toi, puis un créneau disponible.',
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+                    child: Text(
+                      'Choisis un centre',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
                   for (final c in centres) _CarteCentre(centre: c),
                 ],
               ],
@@ -103,16 +112,10 @@ class _CentresScreenState extends State<CentresScreen> {
   }
 }
 
+/// Carte compacte : nom, ville, prochain créneau, deux actions.
 class _CarteCentre extends StatelessWidget {
   final Centre centre;
   const _CarteCentre({required this.centre});
-
-  void _confirmer(BuildContext context, CreneauCentre creneau) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => _DialogueReservation(centre: centre, creneau: creneau),
-    );
-  }
 
   Future<void> _itineraire(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -123,122 +126,186 @@ class _CarteCentre extends StatelessWidget {
     }
   }
 
+  void _ouvrirReservation(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => _FeuilleReservation(centre: centre),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final creneaux = centre.creneauxAVenir;
+    final prochain = creneaux.isEmpty ? null : creneaux.first;
+    final lieu = [
+      if (centre.ville.isNotEmpty) centre.ville,
+      if (centre.adresse.isNotEmpty) centre.adresse,
+    ].join(' · ');
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 7),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.location_on,
-                    color: scheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        centre.nom,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        centre.ville,
-                        style: TextStyle(color: scheme.outline),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Localisation
-            if (centre.adresse.isNotEmpty) ...[
-              _infoLigne(context, Icons.place_outlined, centre.adresse),
-              const SizedBox(height: 6),
-            ],
-            if (centre.telephone.isNotEmpty)
-              _infoLigne(context, Icons.phone_outlined, centre.telephone),
-            if (centre.localisable) ...[
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: () => _itineraire(context),
-                icon: const Icon(Icons.directions_outlined),
-                label: const Text('Itinéraire'),
-              ),
-            ],
-
-            const Divider(height: 22),
-
-            Text(
-              'Créneaux disponibles',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 10),
-            if (centre.creneauxAVenir.isEmpty)
-              Text(
-                'Aucun créneau disponible pour le moment.',
-                style: TextStyle(color: scheme.outline),
-              )
-            else
-              // Regroupés par jour : avec les créneaux hebdomadaires, la liste
-              // couvre plusieurs semaines.
-              for (final jour in _parJour(centre.creneauxAVenir)) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 6),
-                  child: Text(
-                    formatJourCreneau(jour.first.dateHeure),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: prochain == null ? null : () => _ouvrirReservation(context),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: scheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.apartment_rounded,
+                      color: scheme.onPrimaryContainer,
                     ),
                   ),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final creneau in jour)
-                      ActionChip(
-                        avatar: Icon(
-                          Icons.schedule,
-                          size: 16,
-                          color: scheme.primary,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          centre.nom,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
                         ),
-                        label: Text(formatHeure(creneau.dateHeure)),
-                        onPressed: () => _confirmer(context, creneau),
+                        if (lieu.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            lieu,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Prochaine disponibilité : l'info qui compte, en un coup d'œil.
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: prochain == null
+                      ? scheme.surfaceContainerHighest
+                      : scheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      prochain == null
+                          ? Icons.event_busy_outlined
+                          : Icons.schedule,
+                      size: 16,
+                      color: prochain == null ? scheme.outline : scheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        prochain == null
+                            ? 'Aucun créneau disponible'
+                            : 'Prochain : ${formatCreneau(prochain.dateHeure)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: prochain == null
+                              ? scheme.onSurfaceVariant
+                              : scheme.primary,
+                        ),
                       ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-              ],
-          ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (centre.localisable) ...[
+                    IconButton.outlined(
+                      tooltip: 'Itinéraire',
+                      onPressed: () => _itineraire(context),
+                      icon: const Icon(Icons.directions_outlined),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (centre.telephone.isNotEmpty) ...[
+                    IconButton.outlined(
+                      tooltip: centre.telephone,
+                      onPressed: () => launchUrl(
+                        Uri(
+                          scheme: 'tel',
+                          path: centre.telephone.replaceAll(' ', ''),
+                        ),
+                      ),
+                      icon: const Icon(Icons.phone_outlined),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: prochain == null
+                          ? null
+                          : () => _ouvrirReservation(context),
+                      child: const Text('Choisir un créneau'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+/// Feuille unique de réservation : jour → heure → motif facultatif → confirmer.
+class _FeuilleReservation extends StatefulWidget {
+  final Centre centre;
+  const _FeuilleReservation({required this.centre});
+
+  @override
+  State<_FeuilleReservation> createState() => _FeuilleReservationState();
+}
+
+class _FeuilleReservationState extends State<_FeuilleReservation> {
+  late final List<List<CreneauCentre>> _jours = _parJour(
+    widget.centre.creneauxAVenir,
+  );
+  int _jour = 0;
+  CreneauCentre? _creneau;
+  final _motif = TextEditingController();
+  bool _envoi = false;
+  String? _erreur;
+
+  @override
+  void dispose() {
+    _motif.dispose();
+    super.dispose();
   }
 
   /// Créneaux (déjà triés) regroupés par jour calendaire.
@@ -259,46 +326,9 @@ class _CarteCentre extends StatelessWidget {
     return groupes;
   }
 
-  Widget _infoLigne(BuildContext context, IconData icon, String texte) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: scheme.outline),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            texte,
-            style: TextStyle(color: scheme.onSurfaceVariant, height: 1.3),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Confirmation d'un créneau, avec un motif facultatif, puis réservation.
-class _DialogueReservation extends StatefulWidget {
-  final Centre centre;
-  final CreneauCentre creneau;
-  const _DialogueReservation({required this.centre, required this.creneau});
-
-  @override
-  State<_DialogueReservation> createState() => _DialogueReservationState();
-}
-
-class _DialogueReservationState extends State<_DialogueReservation> {
-  final _motif = TextEditingController();
-  bool _envoi = false;
-  String? _erreur;
-
-  @override
-  void dispose() {
-    _motif.dispose();
-    super.dispose();
-  }
-
   Future<void> _reserver() async {
+    final creneau = _creneau;
+    if (creneau == null) return;
     setState(() {
       _envoi = true;
       _erreur = null;
@@ -307,13 +337,12 @@ class _DialogueReservationState extends State<_DialogueReservation> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await repo.prendre(widget.creneau.id, motif: _motif.text);
+      await repo.prendre(creneau.id, motif: _motif.text);
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Demande envoyée · ${widget.centre.nom} · '
-            '${formatCreneau(widget.creneau.dateHeure)}. '
+            'Demande envoyée pour le ${formatCreneau(creneau.dateHeure)}. '
             'Tu seras notifié dès sa confirmation.',
           ),
         ),
@@ -333,67 +362,171 @@ class _DialogueReservationState extends State<_DialogueReservation> {
     }
   }
 
+  Widget _etape(BuildContext context, String texte) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(
+      texte,
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return AlertDialog(
-      title: const Text('Confirmer le rendez-vous'),
-      content: SingleChildScrollView(
+    final heures = _jours.isEmpty ? const <CreneauCentre>[] : _jours[_jour];
+    final creneau = _creneau;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               widget.centre.nom,
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
-            if (widget.centre.adresse.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(widget.centre.adresse),
-            ],
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(Icons.event, size: 18),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(formatCreneauLong(widget.creneau.dateHeure)),
+            if (widget.centre.ville.isNotEmpty)
+              Text(
+                widget.centre.ville,
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+            const SizedBox(height: 20),
+
+            _etape(context, '1. Le jour'),
+            SizedBox(
+              height: 76,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _jours.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, i) => _PastilleJour(
+                  date: _jours[i].first.dateHeure,
+                  choisi: i == _jour,
+                  onTap: () => setState(() {
+                    _jour = i;
+                    _creneau = null;
+                  }),
                 ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            _etape(context, '2. L\'heure'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final c in heures)
+                  ChoiceChip(
+                    label: Text(formatHeure(c.dateHeure)),
+                    selected: c == creneau,
+                    showCheckmark: false,
+                    onSelected: _envoi
+                        ? null
+                        : (_) => setState(() => _creneau = c),
+                  ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 20),
+
             TextField(
               controller: _motif,
               enabled: !_envoi,
               maxLength: 500,
-              maxLines: 2,
+              maxLines: 1,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Motif (facultatif)',
                 hintText: 'Ex. : dépôt de dossier, inscription…',
+                counterText: '',
               ),
             ),
-            if (_erreur != null)
+            if (_erreur != null) ...[
+              const SizedBox(height: 8),
               Text(_erreur!, style: TextStyle(color: scheme.error)),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                ),
+                onPressed: creneau == null || _envoi ? null : _reserver,
+                child: _envoi
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        creneau == null
+                            ? 'Choisis une heure'
+                            : 'Réserver · ${formatCreneauLong(creneau.dateHeure)}',
+                        textAlign: TextAlign.center,
+                      ),
+              ),
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _envoi ? null : () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+    );
+  }
+}
+
+/// Pastille de jour : « mar. / 19 / nov. ».
+class _PastilleJour extends StatelessWidget {
+  final DateTime date;
+  final bool choisi;
+  final VoidCallback onTap;
+  const _PastilleJour({
+    required this.date,
+    required this.choisi,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fg = choisi ? scheme.onPrimary : scheme.onSurface;
+    return Material(
+      color: choisi ? scheme.primary : scheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: SizedBox(
+          width: 60,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                DateFormat('EEE', 'fr_FR').format(date),
+                style: TextStyle(fontSize: 12, color: fg),
+              ),
+              Text(
+                '${date.day}',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: fg,
+                ),
+              ),
+              Text(
+                DateFormat('MMM', 'fr_FR').format(date),
+                style: TextStyle(fontSize: 12, color: fg),
+              ),
+            ],
+          ),
         ),
-        FilledButton(
-          onPressed: _envoi ? null : _reserver,
-          child: _envoi
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Confirmer'),
-        ),
-      ],
+      ),
     );
   }
 }
